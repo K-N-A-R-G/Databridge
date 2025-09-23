@@ -1,0 +1,9 @@
+{
+  "quantity": {
+    "target_name": "quantity",
+    "type": "int",
+    "format": null,
+    "header_case": "capitalize",
+    "save": true
+  }
+}

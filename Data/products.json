@@ -1,0 +1,62 @@
+[
+  {
+    "product_category": "Beauty",
+    "price_per_unit": 50
+  },
+  {
+    "product_category": "Clothing",
+    "price_per_unit": 500
+  },
+  {
+    "product_category": "Electronics",
+    "price_per_unit": 30
+  },
+  {
+    "product_category": "Beauty",
+    "price_per_unit": 30
+  },
+  {
+    "product_category": "Clothing",
+    "price_per_unit": 25
+  },
+  {
+    "product_category": "Electronics",
+    "price_per_unit": 25
+  },
+  {
+    "product_category": "Electronics",
+    "price_per_unit": 300
+  },
+  {
+    "product_category": "Clothing",
+    "price_per_unit": 50
+  },
+  {
+    "product_category": "Beauty",
+    "price_per_unit": 25
+  },
+  {
+    "product_category": "Electronics",
+    "price_per_unit": 500
+  },
+  {
+    "product_category": "Clothing",
+    "price_per_unit": 30
+  },
+  {
+    "product_category": "Clothing",
+    "price_per_unit": 300
+  },
+  {
+    "product_category": "Beauty",
+    "price_per_unit": 500
+  },
+  {
+    "product_category": "Beauty",
+    "price_per_unit": 300
+  },
+  {
+    "product_category": "Electronics",
+    "price_per_unit": 50
+  }
+]
