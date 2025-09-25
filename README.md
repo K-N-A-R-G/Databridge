@@ -99,7 +99,8 @@ Planned:
 |----------------|----------------------|-------------|
 | custom_types.py | DemoError | “Demo version” exception. |
 | devmenu.py     | DevMenu | CLI menu for launching functions. |
-| metaeditor.py  | MetaEditor | Interactive tool for normalization template (headers, types, format). Uses `normalize_column` for preview. |
+| template_manager.py | MetaEditor | Interactive tool for normalization template (headers, types, format). Uses `normalize_column` for preview. |
+| template_manager.py | select_or_create_template | helper function for managing metadata templates before processing a file |
 | getdata.py     | detect_format | Detects CSV/JSON format. |
 | getdata.py     | read_data | Reads file, returns `(format, list of dicts)`. |
 | getdata.py     | normalize_column | Normalizes one column (type, format, header case). |
@@ -113,3 +114,95 @@ Planned:
 4. ML critique.
 5. Documentation & polishing.
 [Optional] — test coverage.
+
+# Implemented so far:
+- ## MetaEditor and Template Management
+
+### MetaEditor
+
+`MetaEditor` is a class for interactive editing of metadata templates (`*_meta.json`) for CSV or JSON data files.
+It allows the user to:
+
+- Inspect column headers and current metadata.
+- Normalize header names (`lower`, `capitalize`, `title`, `upper`).
+- Set the data type (`str`, `int`, `float`, `date`) and optional format string for each column.
+- Preview the effect of normalization and formatting on a sample of data.
+- Select which columns should be saved to the metadata template.
+
+**Features:**
+
+- Supports CSV and JSON input files.
+- Stores metadata in a JSON template file in `Data/templates/`.
+- Tracks user selections for saving columns (`[S]` marker).
+- Type information is stored as strings (`"str"`, `"int"`, `"float"`, `"date"`).
+
+**Usage Example:**
+
+```python
+from template_manager import MetaEditor
+from pathlib import Path
+
+editor = MetaEditor(Path("Data/sales.csv"))
+editor.edit_header()
+editor.save_meta(Path("Data/templates/sales_meta.json"))
+```
+
+### select_or_create_template
+
+`select_or_create_template(filename: str) -> Path | None` is a helper function for managing metadata templates before processing a file.
+
+Functionality:
+
+- Checks if a template exists for the given file (`Data/templates/{filename}_meta.json`).
+
+- If a template exists:
+
+   - Displays current metadata for each column (`[S]` indicates columns marked for saving).
+
+   - Offers the user to confirm the template or edit it with `MetaEditor`.
+
+- If no template exists:
+
+   - Offers options to create a new template.
+
+   - Or to select an existing template as a base for a new template.
+
+User can browse existing templates, view, edit, and save a new template.
+
+Returns the Path to the chosen or created template, or `None` if the user exits.
+
+## Template Selection / Creation Flow
+
+1. Open file for processing (e.g., `Data/sales.csv`)
+2. Check if template exists for this file (`Data/templates/sales_meta.json`)
+   - **If template exists:**
+     1. Display template contents (show columns, types, format, `[S]` marks for save)
+     2. User options:
+        - Confirm template → use it
+        - Edit template via `MetaEditor`
+        - Exit → cancel processing
+     3. If editing:
+        - Make changes in `MetaEditor` (normalize headers, set type/format, mark columns for save)
+        - After editing:
+          - Save new template → use it
+          - Cancel → return to previous options
+   - **If template does not exist:**
+     1. Show options:
+        - Create new template via `MetaEditor`
+        - Use existing template as a base
+        - Exit → cancel processing
+     2. If using existing template as base:
+        - Show list of available templates
+        - User selects template to view
+        - Options for each template:
+          - Edit template as new template
+          - Back to template list
+        - After editing new template:
+          - Save → use new template
+          - Cancel → return to template list
+     3. If creating new template:
+        - Launch `MetaEditor` on current file
+        - After editing:
+          - Save → use new template
+          - Cancel → return to options
+3. Return Path to selected/created template or `None` if user exits
