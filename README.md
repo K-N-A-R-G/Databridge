@@ -40,6 +40,8 @@ Main focus:
   - [`template_manager.py`](./doc/template_manager.md): interactive template builder.
   - [`etl.py`](./doc/elt.md): helpers for DataFrame creation and merging.
   - [`devtools.py`](./doc/devtools.md): developer utilites for splitting source file, adding "noise", etc.
+  - [`pipeline.py`](./doc/pipeline.md): interactive pipeline for building DataFrames from source files using templates.
+
 - Development logs, detailed docs and examples → see [`doc/`](./doc/).
 
 ## Demonstration Criteria

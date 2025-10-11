@@ -8,40 +8,50 @@ import pandas as pd
 
 def create_df_from_file(file_path: Path, template: dict, drop_duplicates: bool = False) -> pd.DataFrame:
     """
-    Creates a DataFrame from file based on MetaEditor template.
-
-    Args:
-        file_path: Path to the input data file.
-        template: Template dict from MetaEditor.
-        drop_duplicates: If True, duplicate rows will be removed.
-
-    Returns:
-        pd.DataFrame
+    Creates a DataFrame from file strictly based on the template:
+    - Iterates over template columns
+    - For each column, tries to find a matching file column (via normalize_header)
+    - If found and at least one value normalizes → include column
+    - Otherwise column filled with NaN
     """
-    fmt, raw = read_data(file_path)  # returns (format, list[dict])
-    df_dict = {col_spec["target_name"]: [] for col_spec in template.values() if col_spec.get("save", False)}
+    fmt, raw = read_data(file_path)  # (format, list[dict])
+    df_dict = {}
 
-    for row in raw:
-        for col_name, col_spec in template.items():
-            if not col_spec.get("save", False):
-                continue
-            value = row.get(col_name, None)
+    if not raw:
+        return pd.DataFrame()
 
-            try:
-                # normalize_column always expects a Series
-                series = pd.Series([value])
-                normalized = normalize_column(
-                    series,
-                    target_name=col_spec["target_name"],
-                    dtype=col_spec["type"],
-                    format_spec=col_spec.get("format"),
-                    header_case=col_spec.get("header_case")
-                )
-                val = normalized.iloc[0] if not normalized.empty else None
-            except Exception:
-                val = None
+    # Preload first N rows as sample for validation
+    sample_size = min(10, len(raw))
+    sample_rows = raw[:sample_size]
 
-            df_dict[col_spec["target_name"]].append(val)
+    for col_key, col_spec in template.items():
+        if not col_spec.get("save", False):
+            continue
+
+        target_name = col_spec["target_name"]
+        matched_col = None
+
+        # try to find matching column in file headers
+        for file_col in raw[0].keys():
+            values = [row.get(file_col, None) for row in sample_rows]
+            if match_column_with_template(file_col, values, {**col_spec, "tpl_key": col_key}):
+                matched_col = file_col
+                break
+
+        if matched_col is None:
+            # no match → create empty column
+            df_dict[target_name] = [pd.NA] * len(raw)
+        else:
+            # normalize whole column
+            series = pd.Series([row.get(matched_col, None) for row in raw])
+            normalized = normalize_column(
+                series,
+                target_name=col_spec["target_name"],
+                dtype=col_spec["type"],
+                format_spec=col_spec.get("format"),
+                header_case=col_spec.get("header_case"),
+            )
+            df_dict[target_name] = normalized
 
     df = pd.DataFrame(df_dict)
 
@@ -52,22 +62,36 @@ def create_df_from_file(file_path: Path, template: dict, drop_duplicates: bool =
 
 
 
-def append_df_from_file(df: pd.DataFrame, file_path: Path, template: dict, drop_duplicates: bool = False) -> pd.DataFrame:
+def append_df_from_file(
+    df: pd.DataFrame,
+    file_path: Path,
+    template: dict,
+    drop_duplicates: bool = False
+) -> pd.DataFrame:
     """
     Appends data from file to existing DataFrame according to template.
-    Rows where all values are None are ignored.
+    Works strictly from template, not from existing DataFrame structure.
 
-    Args:
-        df: Existing DataFrame.
-        file_path: Path to the input data file.
-        template: Template dict from MetaEditor.
-        drop_duplicates: If True, duplicate rows will be removed after concatenation.
-
-    Returns:
-        pd.DataFrame
+    - All columns defined in template will be present in the result.
+    - For each column, tries to match file headers via normalize_header + sample normalization.
+    - If match found → normalize and append values.
+    - If no match → append NaN values for that column.
+    - Empty rows (all NaN) are ignored.
     """
     new_df = create_df_from_file(file_path, template, drop_duplicates=False)
-    new_df = new_df.dropna(how="all")  # drop empty rows
+    new_df = new_df.dropna(how="all")  # drop completely empty rows
+
+    # Ensure both DataFrames have same set/order of columns (all from template)
+    template_cols = [spec["target_name"] for spec in template.values() if spec.get("save", False)]
+    for col in template_cols:
+        if col not in df.columns:
+            df[col] = pd.NA
+        if col not in new_df.columns:
+            new_df[col] = pd.NA
+
+    # Reorder both by template definition
+    df = df[template_cols]
+    new_df = new_df[template_cols]
 
     result = pd.concat([df, new_df], ignore_index=True)
 
@@ -76,13 +100,6 @@ def append_df_from_file(df: pd.DataFrame, file_path: Path, template: dict, drop_
 
     return result
 
-
-def load_template(template_path: Path) -> dict:
-    """
-    Loads template JSON as dict.
-    """
-    with template_path.open("r", encoding="utf-8") as f:
-        return json.load(f)
 
 
 def load_template(template_path: Path) -> dict:

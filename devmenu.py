@@ -16,6 +16,54 @@ CURSOR_HOME = "\033[H"
 
 
 class DevMenu:
+    """
+    DevMenu is a lightweight, universal CLI interactive menu system for running functions with arguments.
+    Ideal for developer utilities, test consoles, and interactive tools.
+
+    Features:
+        - Create menu from a dictionary mapping keys to (description, function, args, kwargs).
+        - Calls functions with arguments when selected.
+        - Temporarily hides the menu while the function runs.
+        - Returns to the menu after function completion or exception.
+        - Logs the last messages directly in the menu (console output).
+
+    Example usage:
+        from devmenu import DevMenu
+
+        def greet(name: str):
+            print(f"Hello, {name}!")
+
+        def add(a, b):
+            print(f"{a} + {b} = {a + b}")
+
+        actions = {
+            "1": ("Say Hello", greet, ("Alice",), {}),
+            "2": ("Add numbers", add, (3, 5), {}),
+        }
+
+        menu = DevMenu(actions, title="My Dev Menu")
+        menu.run()
+
+    Methods:
+        __init__(actions: dict, title: str = "Dev Menu", message_lines: int = 5):
+            Initializes the menu.
+            actions: dict mapping keys to (description, function, args, kwargs)
+            title: menu title displayed at the top
+            message_lines: number of messages to show at the bottom of the menu
+
+        run():
+            Starts the menu loop.
+
+        show_menu():
+            Displays the current menu and the last messages.
+
+        run_action(fnc: Callable, args: tuple = (), kwargs: dict = {}):
+            Runs the given function in "full screen" mode, temporarily suspending the menu.
+            Catches exceptions and shows traceback without breaking the menu.
+
+        log(msg: str):
+            Adds a message to the log and displays it at the bottom of the menu.
+    """
     def __init__(
         self,
         actions: Dict[

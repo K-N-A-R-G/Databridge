@@ -6,6 +6,7 @@ from typing import Any, List, Tuple, Optional
 import csv
 import json
 import pandas as pd
+import re
 
 
 def detect_format(path: Path) -> str:
@@ -120,6 +121,13 @@ def normalize_text(val: str) -> Optional[str]:
     val = re.sub(r"[^a-z0-9]+", "_", val)
     val = val.strip("_")
     return val
+
+
+def normalize_header(name: str) -> str:
+    """Convert column names to snake_case."""
+    name = name.strip().lower()
+    name = re.sub(r"[^0-9a-z.]+", "_", name)
+    return name.strip("_")
 
 
 def normalize_column(values: pd.Series, target_name: str, dtype: type,

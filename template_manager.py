@@ -133,7 +133,6 @@ class MetaEditor:
 
 # --- Helper to run editor --------------------------------------------------
 def run_metaeditor(filename: str):
-    # всегда внутри Data/
     path = Path("Data") / filename
     editor = MetaEditor(path)
     editor.edit_header()
@@ -147,9 +146,10 @@ def run_metaeditor(filename: str):
 
 def select_or_create_template(filename: str) -> Path | None:
     """
-    Проверяет наличие шаблона для данного файла.
-    Если нет — предлагает создать новый или использовать существующий как основу.
-    Возвращает путь к выбранному/новому шаблону или None при отмене.
+    Checks for the presence of a template for this file.
+    If not, it offers to create a new one or use an existing one as a basis.
+    Returns the path to the selected/new template or None when canceled.
+
     """
     data_path = Path("Data")
     templates_path = data_path / "templates"
