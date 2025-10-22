@@ -1,0 +1,9 @@
+{
+  "date": {
+    "target_name": "date",
+    "type": "date",
+    "format": "%Y/%m/%d_%A",
+    "header_case": "title",
+    "save": true
+  }
+}

@@ -14,11 +14,11 @@ It integrates file selection, template management, and ETL routines into a singl
   - Select all files
   - Select only `.csv` or `.json` files
 - Builds a unified DataFrame:
-  - Uses template rules from **MetaEditor**
+  - Uses template rules defined via **MetaEditor** and loaded by `etl.load_template()`.
   - Normalizes headers and values automatically
   - Ensures deduplication if requested
   - Can append data from multiple sources incrementally
-- Saves results automatically to `./Data/results/`
+- The resulting DataFrame can be saved as `.csv`, `.xlsx`, or `.json` under `./Data/results/`.
 
 ---
 
@@ -46,16 +46,12 @@ It integrates file selection, template management, and ETL routines into a singl
 
 ---
 
-## Example
-
-
----
-
 ## Internals
 
 - Uses **getdata.py** for raw file parsing and column normalization.
 - Uses **etl.py** for template-based DataFrame creation and appending.
 - Uses **DevMenu** for the interactive control panel.
+- When multiple files are selected, `etl.append_df_from_file()` ensures consistent column order and deduplication.
 
 ---
 
@@ -67,10 +63,12 @@ It integrates file selection, template management, and ETL routines into a singl
 ## Data Flow Diagram
 
 ```mermaid
-flowchart TD
-    A[Raw Data Files<br>(CSV, JSON in ./Data/)] --> B[File Selection<br>(choose_files)]
-    B --> C[Template Selection<br>(choose_template)]
-    C --> D[ETL Processing<br>(create/append DataFrame)]
-    D --> E[Normalized DataFrame]
-    E --> F[Save Result<br>(CSV in ./Data/results/)]
+graph TD
+    A["Raw Data Files\n(CSV, JSON in ./Data)"]
+    B["Detect Format + Normalize Headers"]
+    C["Apply Template Rules"]
+    D["Merge into Unified DataFrame"]
+    E["Save to ./Data/results/"]
+
+    A --> B --> C --> D --> E
 ```

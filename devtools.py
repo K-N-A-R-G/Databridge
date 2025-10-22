@@ -121,7 +121,7 @@ def add_noise(
 
 # --- Dev Menu ---------------------------------------------------------
 
-menu_actions = {
+menu_actions: ActionDict = {
     "1": ("",
         split_dataset, (
         "Data/retail_sales_dataset.csv",

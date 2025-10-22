@@ -1,11 +1,9 @@
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 import pandas as pd
-import json
-import re
 
+from custom_types import ActionDict
 from devmenu import DevMenu
-from getdata import read_data, normalize_column, detect_format, normalize_header
 from etl import append_df_from_file, load_template, create_df_from_file
 
 DATA_DIR = Path("./Data")
@@ -52,24 +50,32 @@ def choose_files() -> List[Path]:
     return files
 
 
-def choose_template() -> Path:
-    """Prompt user to select a template JSON file."""
+def choose_from_list(items: list[str], title: str = "Select item") -> int | None:
+    """Generic selector for DevMenu-like lists."""
+    print(f"\n{title}:")
+    for i, item in enumerate(items, start=1):
+        print(f"{i:>2}) {item}")
+
+    while True:
+        choice = input("\nEnter number or 'q' to back: ").strip().lower()
+        if choice == "q":
+            return None
+        try:
+            num = int(choice)
+            if 1 <= num <= len(items):
+                return num - 1
+            print("Incorrect number")
+        except ValueError:
+            print("Incorrect input")
+
+
+def choose_template() -> Optional[Path]:
     templates = list(TEMPLATES_DIR.glob("*.json"))
     if not templates:
         raise FileNotFoundError("No templates found in ./Data/templates/")
 
-    print("\nAvailable templates:")
-    for i, t in enumerate(templates, 1):
-        print(f"{i}) {t.name}")
-
-    try:
-        num = int(input("\nChoose template number: "))
-        tpl_path = templates[num - 1]
-        return tpl_path
-    except ValueError:
-        print("Incorrect input")
-    except IndexError:
-        print("Incorrect number")
+    idx = choose_from_list([t.name for t in templates], "Available templates")
+    return templates[idx] if idx is not None else None
 
 
 def build_df_interactive():
@@ -82,74 +88,76 @@ def build_df_interactive():
 
 
 def build_dataframe_from_template(
-    template_path: Path,
+    template_path: Optional[Path],
     drop_duplicates: bool = True,
     save_result: bool = True
-) -> pd.DataFrame:
+) -> Optional[pd.DataFrame]:
     """
     Build a DataFrame from multiple files using a MetaEditor template.
     Columns are added if they match the template (normalized headers + successful data normalization).
     """
+    if template_path is None:
+        print("No template selected.")
+        return None
+
     template = load_template(template_path)
     files = choose_files()
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Initialize empty DataFrame with template columns
-    df_dict = {col_spec["target_name"]: [] for col_spec in template.values() if col_spec.get("save", False)}
-    df = pd.DataFrame(df_dict)
+    # Start with empty DataFrame; will be filled by first file
+    df = pd.DataFrame()
 
     for f in files:
-        fmt, raw = read_data(f)
-        for col_name, col_spec in template.items():
-            if not col_spec.get("save", False):
-                continue
-
-            # Extract column values from raw, normalize header
-            matched_values = []
-            for row in raw:
-                for k, v in row.items():
-                    if normalize_header(k) == normalize_header(col_name):
-                        try:
-                            series = pd.Series([v])
-                            normalized = normalize_column(
-                                series,
-                                target_name=col_spec["target_name"],
-                                dtype=col_spec["type"],
-                                format_spec=col_spec.get("format"),
-                                header_case=col_spec.get("header_case")
-                            )
-                            val = normalized.iloc[0] if not normalized.empty else None
-                            if val is not None:
-                                matched_values.append(val)
-                        except Exception:
-                            continue
-            # Add column to df if at least one value matched
-            if matched_values:
-                if col_spec["target_name"] not in df.columns:
-                    df[col_spec["target_name"]] = pd.Series([None]*len(df))
-                # Align lengths
-                max_len = max(len(df), len(matched_values))
-                if len(df) < max_len:
-                    for c in df.columns:
-                        df[c] = df[c].reindex(range(max_len))
-                df.loc[len(df) - len(matched_values):, col_spec["target_name"]] = pd.to_datetime(
-                matched_values, format=col_spec.get("format"), errors="coerce"
-                )
+        if df.empty:
+            df = create_df_from_file(f, template, drop_duplicates=False)
+        else:
+            df = append_df_from_file(df, f, template, drop_duplicates=False)
 
     if drop_duplicates:
         df = df.drop_duplicates(ignore_index=True)
 
     if save_result:
-        out_file = RESULTS_DIR / f"result_{template_path.stem}.csv"
-        df.to_csv(out_file, index=False)
-        print(f"\nSaved result to {out_file}")
+        save_dataframe(df, template_path)
 
     return df
 
 
-def main():
+def save_dataframe(df: pd.DataFrame, template_path: Path):
+    """
+    Interactive DataFrame saving using DevMenu.
+    """
+    out_base = RESULTS_DIR / f"result_{template_path.stem}"
+
     actions = {
+        "c": (
+            "Save as CSV",
+            df.to_csv,
+            (out_base.with_suffix(".csv"),),
+            {"index": False}
+        ),
+        "x": (
+            "Save as XLSX",
+            df.to_excel,
+            (out_base.with_suffix(".xlsx"),),
+            {"index": False}
+        ),
+        "j": (
+            "Save as JSON",
+            df.to_json,
+            (out_base.with_suffix(".json"),),
+            {"orient": "records", "indent": 2}
+        ),
+    }
+
+    menu = DevMenu(actions, title="Choose output format")
+    menu.run()
+
+    print(f"\nSaved result to {out_base}.[csv|xlsx|json]")
+
+
+def main():
+    actions: ActionDict = {
         "1": ("Build DataFrame using template", build_df_interactive, (), {}),
         "2": ("List files in ./Data/", lambda: print("\n".join(f.name for f in get_all_data_files())), (), {}),
     }

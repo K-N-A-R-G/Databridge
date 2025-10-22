@@ -14,18 +14,20 @@ This module provides functions to extract, transform, and load tabular data into
 
 ## Functions
 
-### `create_df_from_file(file_path: Path, template: dict, drop_duplicates: bool = False) -> pd.DataFrame`
+### `create_df_from_file(file_path: Path, template: TemplateDict, drop_duplicates: bool = False) -> pd.DataFrame`
 Creates a DataFrame from a file according to the column specification in `template`.
 
 - Reads raw data using `getdata.read_data`.
 - Builds a dictionary of target columns (only those with `"save": true`).
+- Matches file columns to template columns using `normalize_header` before value normalization.
 - Normalizes each value with `normalize_column` (type casting, formatting, case adjustment).
+- Tests a short sample (≈10 rows) to confirm that normalization produces valid results before accepting a column.
 - Returns a cleaned DataFrame.
 - Optionally removes duplicate rows if `drop_duplicates=True`.
 
 ⚠️ **Limitations:**
 - Each value is normalized independently; cross-row logic (like duplicate detection) is applied only if `drop_duplicates=True`.
-- Invalid or unconvertible values are set to `None`.
+- If no matching column is found, the resulting column is filled entirely with `pd.NA`.
 
 ---
 

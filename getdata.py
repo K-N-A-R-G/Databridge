@@ -76,8 +76,8 @@ def parse_date(val: str) -> Optional[str]:
             return None
         # If time is 00:00:00, drop time
         if dt.time() == datetime.min.time():
-            return dt.strftime("%Y-%m-%d")
-        return dt.strftime("%Y-%m-%d %H:%M:%S")
+            return str(dt.strftime("%Y-%m-%d"))
+        return str(dt.strftime("%Y-%m-%d %H:%M:%S"))
     except Exception:
         return None
 
@@ -130,8 +130,11 @@ def normalize_header(name: str) -> str:
     return name.strip("_")
 
 
-def normalize_column(values: pd.Series, target_name: str, dtype: type,
-                     format_spec: str = None, header_case: str = None) -> pd.Series:
+def normalize_column(values: pd.Series,
+                     target_name: str,
+                     dtype: str,
+                     format_spec: Optional[str] = None,
+                     header_case: Optional[str] = None) -> pd.Series:
     """
     Normalize a pandas Series according to metadata.
 
@@ -154,17 +157,17 @@ def normalize_column(values: pd.Series, target_name: str, dtype: type,
 
     if dtype == "numeric":
         series = pd.to_numeric(series, errors="coerce")
-    elif dtype == int:
+    elif dtype == "int":
         series = pd.to_numeric(series, errors="coerce").astype("Int64")
-    elif dtype == float:
+    elif dtype == "float":
         series = pd.to_numeric(series, errors="coerce").astype(float)
         if format_spec:
             series = series.map(
                 lambda x: format(x, format_spec) if pd.notnull(x) else x
             )
-    elif dtype == str:
+    elif dtype == "str":
         series = series.astype(str)
-    elif dtype == "date" or dtype.__name__ == "date":
+    elif dtype == "date":
         # convert to datetime
         series = pd.to_datetime(series, errors="coerce")
         if format_spec:
@@ -173,11 +176,3 @@ def normalize_column(values: pd.Series, target_name: str, dtype: type,
         series = series  # fallback, leave as-is
 
     return series
-
-
-# --- normalize dataframe ---
-def normalize_df(df: pd.DataFrame) -> pd.DataFrame:
-    df_norm = df.copy()
-    for col in df_norm.columns:
-        df_norm[col] = df_norm[col].apply(lambda v: normalize_value(v, col))
-    return df_norm

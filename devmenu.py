@@ -1,3 +1,4 @@
+from custom_types import ActionDict
 from typing import Dict, Tuple, List, Any, Callable
 
 import traceback
@@ -66,9 +67,7 @@ class DevMenu:
     """
     def __init__(
         self,
-        actions: Dict[
-         str, Tuple[Callable[..., Any], Tuple[Any, ...], Dict[Any, Any]]
-        ],
+        actions: ActionDict,
         title: str = "Dev Menu",
         message_lines: int = 5
     ):
