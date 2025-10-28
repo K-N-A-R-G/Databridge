@@ -41,6 +41,8 @@ Main focus:
   - [`etl.py`](./doc/elt.md): helpers for DataFrame creation and merging.
   - [`devtools.py`](./doc/devtools.md): developer utilites for splitting source file, adding "noise", etc.
   - [`pipeline.py`](./doc/pipeline.md): interactive pipeline for building DataFrames from source files using templates.
+  - [`sqlbridge.py`](./doc/sql_layer.md) / [`sqlfuncs.py`](./doc/sql_layer.md): analytical SQL layer — SQLite-based bridge between ETL and visualization.
+
 
 - Development logs, detailed docs and examples → see [`doc/`](./doc/).
 
@@ -60,31 +62,40 @@ Main focus:
 ## Repository Structure
 ```
 Databridge/
-├── Data                # sources, templates & results
+├── Data
 │   ├── customers.csv
 │   ├── products.json
 │   ├── results
-│   │   └── result_sales_meta.csv
+│   │   ├── databases
+│   │   │   └── bridge.db
+│   │   ├── result_sales_meta.csv
+│   │   ├── result_sales_meta.json
+│   │   └── result_sales_meta.xlsx
 │   ├── retail_sales_dataset.csv
 │   ├── retail_store_sales.csv
 │   ├── sales.csv
 │   └── templates
 │       └── sales_meta.json
-├── README.md            # <- you are here
+├── README.md
+├── __init__.py
 ├── custom_types.py
 ├── devmenu.py
 ├── devtools.py
-├── doc                  # detailed module documentation
+├── doc
 │   ├── devtools.md
 │   ├── etl.md
 │   ├── getdata.md
 │   ├── images
 │   ├── pipeline.md
+│   ├── sql_layer.md
 │   └── template_manager.md
 ├── etl.py
 ├── getdata.py
 ├── pipeline.py
+├── sqlbridge.py
+├── sqlfuncs.py
 └── template_manager.py
+
 
 ```
 

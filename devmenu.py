@@ -1,4 +1,5 @@
 from custom_types import ActionDict
+from pathlib import Path
 from typing import Dict, Tuple, List, Any, Callable
 
 import traceback
@@ -127,3 +128,29 @@ class DevMenu:
                 self.log(f"{GREEN}{fnc.__name__} finished.{RESET}")
             else:
                 self.log(f"{RED}Invalid choice. Try again.{RESET}")
+
+
+def select_from_list(items: List, title: str = "Select item") -> any:
+    """
+    Displays numbered list and returns selected element.
+    """
+    if not items:
+        print(f"\033[1;31mNo items available for selection.\033[0m")
+        return None
+
+    print(f"\n\033[1;36m{title}\033[0m\n")
+    for i, item in enumerate(items, start=1):
+        if isinstance(item, Path):
+            item = item.name
+            print(f"{i}. {item}")
+
+    while True:
+        try:
+            choice = input("\n→ Enter number or \"q\" to quit: ")
+            if choice.lower() == "q":
+                return
+            elif 1 <= int(choice) <= len(items):
+                return items[int(choice) - 1]
+        except ValueError:
+            pass
+        print("\033[1;31mInvalid choice, try again.\033[0m")

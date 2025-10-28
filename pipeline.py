@@ -3,7 +3,7 @@ from typing import List, Optional
 import pandas as pd
 
 from custom_types import ActionDict
-from devmenu import DevMenu
+from devmenu import DevMenu, select_from_list
 from etl import append_df_from_file, load_template, create_df_from_file
 
 DATA_DIR = Path("./Data")
@@ -50,32 +50,15 @@ def choose_files() -> List[Path]:
     return files
 
 
-def choose_from_list(items: list[str], title: str = "Select item") -> int | None:
-    """Generic selector for DevMenu-like lists."""
-    print(f"\n{title}:")
-    for i, item in enumerate(items, start=1):
-        print(f"{i:>2}) {item}")
-
-    while True:
-        choice = input("\nEnter number or 'q' to back: ").strip().lower()
-        if choice == "q":
-            return None
-        try:
-            num = int(choice)
-            if 1 <= num <= len(items):
-                return num - 1
-            print("Incorrect number")
-        except ValueError:
-            print("Incorrect input")
-
-
 def choose_template() -> Optional[Path]:
     templates = list(TEMPLATES_DIR.glob("*.json"))
     if not templates:
         raise FileNotFoundError("No templates found in ./Data/templates/")
 
-    idx = choose_from_list([t.name for t in templates], "Available templates")
-    return templates[idx] if idx is not None else None
+    res = Path(
+     'Data/templates/'
+     f'{select_from_list([t.name for t in templates], "Available templates")}')
+    return res
 
 
 def build_df_interactive():
@@ -153,7 +136,7 @@ def save_dataframe(df: pd.DataFrame, template_path: Path):
     menu = DevMenu(actions, title="Choose output format")
     menu.run()
 
-    print(f"\nSaved result to {out_base}.[csv|xlsx|json]")
+    print(f"\nSaved result to {out_base}")
 
 
 def main():
