@@ -1,10 +1,10 @@
 from devmenu import DevMenu
 from getdata import normalize_column, detect_format
 from pathlib import Path
+from typing import Any, List
 
 import json
 import pandas as pd
-from typing import Any, List
 
 
 class MetaEditor:
@@ -179,7 +179,7 @@ def select_or_create_template(filename: str) -> Path | None:
                 return file_template
             elif choice == "2":
                 editor = MetaEditor(Path("Data") / filename)
-                # инициализируем meta из загруженного шаблона
+                # initialize meta from the loaded template
                 for h, m in tmpl_data.items():
                     if h in editor.meta:
                         editor.meta[h].update(m)
@@ -192,7 +192,7 @@ def select_or_create_template(filename: str) -> Path | None:
             elif choice == "3":
                 return None
 
-    # Нет шаблона — предложим варианты
+    # There is no template - we will offer options
     print(f"No template found for '{filename}'.")
     while True:
         print("\nOptions:")
@@ -212,7 +212,7 @@ def select_or_create_template(filename: str) -> Path | None:
             else:
                 print("Cancelled. Returning to options.")
         elif choice == "2":
-            # Список всех шаблонов в templates
+            # List of all templates in /Data/templates
             available = sorted([p for p in templates_path.glob("*_meta.json")])
             if not available:
                 print("No existing templates available.")
@@ -229,7 +229,7 @@ def select_or_create_template(filename: str) -> Path | None:
                     print("Invalid selection.")
                     continue
                 base_template = available[int(sel) - 1]
-                # Загрузить и показать
+                # Load & show
                 try:
                     with base_template.open("r", encoding="utf-8") as f:
                         tmpl_data = json.load(f)
@@ -241,14 +241,14 @@ def select_or_create_template(filename: str) -> Path | None:
                     print("Failed to load template.")
                     continue
 
-                # Опции просмотра/редактирования
+                # View/Edit Options
                 print("\nOptions:")
                 print("1) Edit this template as new template")
                 print("2) Back to template list")
                 action = input("> ").strip()
                 if action == "1":
                     editor = MetaEditor(data_path / filename)
-                    # Инициализируем meta из выбранного шаблона
+                    # Initialization of meta from the selected template
                     for h, m in tmpl_data.items():
                         if h in editor.meta:
                             editor.meta[h].update(m)
@@ -268,7 +268,7 @@ def select_or_create_template(filename: str) -> Path | None:
 
 
 menu_actions = {
-    "1": ("Select/edit metadata", select_or_create_template, ("sales.csv",), {})
+    "1": ("Select/edit metadata", select_or_create_template, (), {"filename": "sales.csv"})
 }
 
 if __name__ == "__main__":

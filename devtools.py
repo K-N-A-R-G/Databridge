@@ -4,23 +4,18 @@ Developer utilities for demo and testing.
 
 __all__ = ["split_dataset", "add_noise"]
 
+from custom_types import ActionDict
 from devmenu import DevMenu
 from datetime import datetime
-from getdata import read_data
+from getdata import read_data, normalize_header
 from pathlib import Path
 from typing import Any, List, Tuple, Union, Optional
+
 import json
 import pandas as pd
 import random
 import re
 import string as st
-
-
-def normalize_header(name: str) -> str:
-    """Convert column names to snake_case."""
-    name = name.strip().lower()
-    name = re.sub(r"[^0-9a-z.]+", "_", name)
-    return name.strip("_")
 
 
 def split_dataset(input_csv: Union[str, Path],
@@ -139,6 +134,6 @@ menu_actions: ActionDict = {
         }),
 }
 
-
-DevMenu(menu_actions, title="DevTools Menu").run()  # type: ignore
+if __name__ == '__main__':
+    DevMenu(menu_actions, title="DevTools Menu").run()  # type: ignore
 

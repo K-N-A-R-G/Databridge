@@ -1,4 +1,6 @@
+from custom_types import buffer
 from typing import Callable, Tuple, Optional
+
 import sqlite3, pandas as pd
 
 
@@ -15,18 +17,34 @@ def register(name: str):
 
 
 def query(conn: sqlite3.Connection, sql: str,
-          params: Optional[Tuple]=None, manual: bool=True) -> pd.DataFrame:
+          params: Optional[tuple] = None,
+          manual: bool = True,
+          preview: int = 10) -> None:
     """
-    Executes arbitrary SQL and returns result as DataFrame.
+    Executes arbitrary SQL and returns result as DataResult or prints preview.
     """
+    cur = conn.cursor()
+    if manual and "limit" not in sql.lower()[-20:]:
+        sql = sql.strip().rstrip(";") + f" LIMIT {preview};"
+    cur.execute(sql, params or ())
+    rows = cur.fetchall()
+    columns = [d[0] for d in cur.description]
+
     if manual:
-        print(pd.read_sql_query(sql, conn, params=params))
+        print(f"\nPreview ({len(rows)} rows):")
+        print(" | ".join(columns))
+        for r in rows:
+            print(" | ".join(str(x) for x in r))
+        return None
     else:
-        return pd.read_sql_query(sql, conn, params=params)
+        buffer.set(
+        data=[tuple(r) for r in rows],
+        name="SQL Query Result"
+        )
 
 
 @register("Top products by revenue")
-def top_products(conn: sqlite3.Connection, limit: int = 5) -> pd.DataFrame:
+def top_products(conn: sqlite3.Connection, limit: int = 5, manual=True) -> pd.DataFrame:
     sql = """
         SELECT p.category, s.product, SUM(s.price * s.quantity) AS revenue
         FROM sales s
@@ -35,11 +53,11 @@ def top_products(conn: sqlite3.Connection, limit: int = 5) -> pd.DataFrame:
         ORDER BY revenue DESC
         LIMIT ?;
     """
-    return query(conn, sql, (limit,))
+    return query(conn, sql, (limit,), manual=manual)
 
 
 @register("Average daily sales by region")
-def avg_check_by_region(conn: sqlite3.Connection) -> pd.DataFrame:
+def avg_check_by_region(conn: sqlite3.Connection, manual=True) -> pd.DataFrame:
     sql = """
         SELECT c.region,
                ROUND(SUM(s.price * s.quantity) / COUNT(DISTINCT s.date), 2) AS avg_daily_sales
@@ -48,11 +66,11 @@ def avg_check_by_region(conn: sqlite3.Connection) -> pd.DataFrame:
         GROUP BY c.region
         ORDER BY avg_daily_sales DESC;
     """
-    return query(conn, sql)
+    return query(conn, sql, manual=manual)
 
 
 @register("Rolling weekly revenue")
-def rolling_weekly_sales(conn: sqlite3.Connection) -> pd.DataFrame:
+def rolling_weekly_sales(conn: sqlite3.Connection, manual=True) -> pd.DataFrame:
     sql = """
         SELECT date,
                SUM(price * quantity)
@@ -60,4 +78,4 @@ def rolling_weekly_sales(conn: sqlite3.Connection) -> pd.DataFrame:
         FROM sales
         ORDER BY date;
     """
-    return query(conn, sql)
+    return query(conn, sql, manual=manual)

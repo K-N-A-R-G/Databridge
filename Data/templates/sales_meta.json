@@ -5,5 +5,19 @@
     "format": "%Y/%m/%d_%A",
     "header_case": "title",
     "save": true
+  },
+  "quantity": {
+    "target_name": "quantity",
+    "type": "int",
+    "format": ":06d",
+    "header_case": "lower",
+    "save": true
+  },
+  "total_amount": {
+    "target_name": "total_amount",
+    "type": "int",
+    "format": null,
+    "header_case": "capitalize",
+    "save": true
   }
 }

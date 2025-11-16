@@ -1,7 +1,7 @@
 """
 sqlbridge.py — minimal analytical SQL layer for Databridge
 """
-
+from config import get_active_table, DB_PATH
 from devmenu import DevMenu, select_from_list
 from pathlib import Path
 
@@ -12,7 +12,6 @@ import sqlite3
 import pandas as pd
 
 
-DB_PATH = Path("Data/results/databases/bridge.db")
 DB_DIR = Path("Data/results/databases")
 
 
@@ -28,11 +27,6 @@ def init_db(tables: dict[str, pd.DataFrame],
     for name, df in tables.items():
         df.to_sql(name, conn, if_exists="replace", index=False)
     return conn
-
-
-def list_databases() -> list[Path]:
-    """List all saved .db files."""
-    select_from_list(sorted(DB_DIR.glob("*.db")))
 
 
 def inspect_db(db_path: Path) -> dict[str, list[str]]:
@@ -60,10 +54,6 @@ def preview_table(db_path: Path, table: str, limit: int = 5) -> pd.DataFrame:
     print(df)
 
 
-# ---------- Example Analytics ----------
-
-# --> moved to sqlfuncs.py
-
 def list_actions() -> list[tuple[int, str]]:
     """
     Returns numbered list of available analytical actions.
@@ -75,7 +65,22 @@ def list_actions() -> list[tuple[int, str]]:
     return actions
 
 
-def make_sql_actiondict(conn) -> dict[str, tuple]:
+def run_action(conn: sqlite3.Connection, index: int):
+    """
+    Runs selected analytical function by its numeric index.
+    """
+    table = get_active_table()
+    func_name = sqlfuncs.__all__[index - 1]
+    func = getattr(sqlfuncs, func_name)
+    print(f'\n\033[1;35m{func.display_name}\033[0m\n')
+    print('\n<Enter> - Preview  |  F - Full processing')
+    mode = input('Select mode: ').strip().lower()
+    manual = False if mode == 'f' else True
+    return func(conn, manual=manual)
+
+
+
+def make_actiondict(conn) -> dict[str, tuple]:
     """
     Builds ActionDict for DevMenu to interact with SQLBridge.
     Keys are string numbers, values = (description, func, args, kwargs)
@@ -93,21 +98,23 @@ def make_sql_actiondict(conn) -> dict[str, tuple]:
 
     # --- Additional service actions ---
     offset = len(actions)
-    actions[str(offset + 1)] = ("List saved databases", list_databases, (), {})
-    actions[str(offset + 2)] = ("Inspect database structure", inspect_db, (DB_PATH,), {})
-    actions[str(offset + 3)] = ("Preview table content", preview_table, (DB_PATH, "sales", 5), {})
+    actions[str(offset + 1)] = ("Inspect database structure", inspect_db, (DB_PATH,), {})
+    actions[str(offset + 2)] = ("Preview table content", preview_table, (DB_PATH, "sales", 5), {})
 
     return actions
 
 
-def run_action(conn: sqlite3.Connection, index: int):
-    """
-    Runs selected analytical function by its numeric index.
-    """
-    func_name = sqlfuncs.__all__[index - 1]
-    func = getattr(sqlfuncs, func_name)
-    print(f'\n\033[1;35m{func.display_name}\033[0m\n')
-    return func(conn)
+def run_sql_engine():
+    """Entry point for Pipeline menu — opens SQL Analytics DevMenu."""
+    if not DB_PATH.exists():
+        print("\033[31mDatabase not found. Run pipeline first.\033[0m")
+        return
+
+    conn = sqlite3.connect(DB_PATH)
+    sql_actions = make_actiondict(conn)
+    menu = DevMenu(sql_actions, title="SQL Analytics", dev_mode=True)
+    menu.run()
+    conn.close()
 
 
 # ---------- Demo ----------
@@ -117,7 +124,6 @@ def demo(tables: dict[str, pd.DataFrame]) -> None:
     Simple self-test: creates DB, runs example query.
     """
     conn = init_db(tables)
-    print(run_action(conn, 1))
 
 
 # ---------- CLI / Direct Run ----------
@@ -148,10 +154,8 @@ if __name__ == "__main__":
         "discount": [0.1, 0.2, 0.0]
     })
 
-    print(list_actions())
 
     demo({"sales": sales, "customers": customers, "products": products})
-    input() # pause
 
     tables = {
         "sales": sales,
@@ -160,6 +164,6 @@ if __name__ == "__main__":
     }
     conn = init_db(tables)
     sql_actions = make_sql_actiondict(conn)
-    menu = DevMenu(sql_actions)
+    menu = DevMenu(sql_actions, title="SQL Actions")
 
     menu.run()

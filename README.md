@@ -36,12 +36,12 @@ Main focus:
 
 ## Current Progress
 - Modules implemented:
-  - [`getdata.py`](./doc/getdata.md): read, detect format, normalize column/data.
-  - [`template_manager.py`](./doc/template_manager.md): interactive template builder.
-  - [`etl.py`](./doc/elt.md): helpers for DataFrame creation and merging.
-  - [`devtools.py`](./doc/devtools.md): developer utilites for splitting source file, adding "noise", etc.
-  - [`pipeline.py`](./doc/pipeline.md): interactive pipeline for building DataFrames from source files using templates.
-  - [`sqlbridge.py`](./doc/sql_layer.md) / [`sqlfuncs.py`](./doc/sql_layer.md): analytical SQL layer — SQLite-based bridge between ETL and visualization.
+  - [`getdata.py`](./doc/getdata.md): detect format, read, normalize raw data.
+  - [`template_manager.py`](./doc/template_manager.md): create and manage normalization templates.
+  - [`etl.py`](./doc/etl.md): convert raw files to normalized DataFrames according to templates.
+  - [`devtools.py`](./doc/devtools.md): developer utilities for testing, splitting, noise injection.
+  - [`pipeline.py`](./doc/pipeline.md): orchestrates full ETL process, builds unified DataFrames, and stores results in SQLite.
+  - [`sqlbridge.py`](./doc/sql_layer.md) / [`sqlfuncs.py`](./doc/sql_layer.md): persistent analytical SQL layer — all normalized DataFrames are written into SQLite (`bridge.db`), which serves as the central data storage for analytics and visualization.
 
 
 - Development logs, detailed docs and examples → see [`doc/`](./doc/).

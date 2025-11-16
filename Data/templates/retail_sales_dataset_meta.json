@@ -1,0 +1,37 @@
+{
+  "Date": {
+    "target_name": "Date",
+    "type": "date",
+    "format": null,
+    "header_case": "lower",
+    "save": true
+  },
+  "Customer ID": {
+    "target_name": "Customer ID",
+    "type": "str",
+    "format": null,
+    "header_case": null,
+    "save": true
+  },
+  "Product Category": {
+    "target_name": "Product Category",
+    "type": "str",
+    "format": null,
+    "header_case": "capitalize",
+    "save": true
+  },
+  "Quantity": {
+    "target_name": "Quantity",
+    "type": "str",
+    "format": null,
+    "header_case": null,
+    "save": true
+  },
+  "Price per Unit": {
+    "target_name": "Price per Unit",
+    "type": "float",
+    "format": ".2f",
+    "header_case": null,
+    "save": true
+  }
+}

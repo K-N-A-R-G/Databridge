@@ -1,14 +1,26 @@
+import atexit
+import pandas as pd
+import sqlite3
+
 from pathlib import Path
 from typing import List, Optional
-import pandas as pd
 
-from custom_types import ActionDict
+from config import DB_PATH, get_active_table, set_active_table
+from custom_types import ActionDict, DBConnection
 from devmenu import DevMenu, select_from_list
+from devtools import split_dataset, add_noise, menu_actions as devtools_actions
 from etl import append_df_from_file, load_template, create_df_from_file
+from pdbridge import run_pd_engine
+from sqlbridge import run_sql_engine
+from template_manager import select_or_create_template
 
 DATA_DIR = Path("./Data")
 RESULTS_DIR = DATA_DIR / "results"
 TEMPLATES_DIR = DATA_DIR / "templates"
+conn = DBConnection()
+
+GREEN = "\033[32m"
+RESET = "\033[0m"
 
 
 def get_all_data_files(suffixes=None) -> List[Path]:
@@ -19,7 +31,7 @@ def get_all_data_files(suffixes=None) -> List[Path]:
     return files
 
 
-def choose_files() -> List[Path]:
+def choose_files(single=False) -> List[Path]:
     """Prompt user to select files from ./Data, with options for all/csv/json or numbered selection."""
     all_files = get_all_data_files(suffixes=[".csv", ".json"])
     if not all_files:
@@ -28,6 +40,14 @@ def choose_files() -> List[Path]:
     print("\nAvailable files:")
     for i, f in enumerate(all_files, 1):
         print(f"{i}) {f.name}")
+
+    if single:
+        try:
+            num = int(input('Type one number of selected file '))
+            choice = all_files[num - 1] if 0 <= num <= len(all_files) else None
+            return choice.name
+        except ValueError:
+            return None
 
     print("\na) All files")
     print("c) All CSV")
@@ -45,7 +65,7 @@ def choose_files() -> List[Path]:
         files = [all_files[i] for i in indices if 0 <= i < len(all_files)]
 
     if not files:
-        raise ValueError("No files selected")
+        print("No files selected")
 
     return files
 
@@ -55,9 +75,11 @@ def choose_template() -> Optional[Path]:
     if not templates:
         raise FileNotFoundError("No templates found in ./Data/templates/")
 
+    item = select_from_list([t.name for t in templates], "Available templates")
+    if not item:
+        return None
     res = Path(
-     'Data/templates/'
-     f'{select_from_list([t.name for t in templates], "Available templates")}')
+     f'Data/templates/{item}')
     return res
 
 
@@ -66,6 +88,9 @@ def build_df_interactive():
     Wrapper to first select a template, then build DataFrame.
     """
     template_path = choose_template()  # Using the existing template selection function
+    if template_path is None:
+        print("No template selected.")
+        return None
     if template_path:
         build_dataframe_from_template(template_path)
 
@@ -79,12 +104,14 @@ def build_dataframe_from_template(
     Build a DataFrame from multiple files using a MetaEditor template.
     Columns are added if they match the template (normalized headers + successful data normalization).
     """
-    if template_path is None:
-        print("No template selected.")
+    path = Path(template_path)
+    if not path.exists():
+        print(f"Error: template not found → {path}")
         return None
-
     template = load_template(template_path)
     files = choose_files()
+    if not files:
+        return
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -102,6 +129,11 @@ def build_dataframe_from_template(
 
     if save_result:
         save_dataframe(df, template_path)
+
+    conn = DBConnection.get()
+    tables = {template_path.stem: df}
+    write_tables_to_db(tables, conn)
+    print(f"{GREEN}SQLite cache updated:{RESET} {template_path.stem} → bridge.db")
 
     return df
 
@@ -139,15 +171,59 @@ def save_dataframe(df: pd.DataFrame, template_path: Path):
     print(f"\nSaved result to {out_base}")
 
 
+def write_tables_to_db(tables: dict[str, pd.DataFrame], conn) -> None:
+    """
+    Write multiple DataFrames into SQLite cache.
+
+    Each key of 'tables' becomes table name; if table exists, it's replaced.
+    """
+    for name, df in tables.items():
+        df.to_sql(name, conn, if_exists="replace", index=False)
+
+
+def choose_active_table():
+    """Interactive selector: fetch tables from SQLite and save selection."""
+    if not DB_PATH.exists():
+        print("\033[31mDatabase not found. Run pipeline first.\033[0m")
+        return
+
+    conn = sqlite3.connect(DB_PATH)
+    tables = pd.read_sql_query(
+        "SELECT name FROM sqlite_master WHERE type='table';", conn
+    )["name"].tolist()
+    conn.close()
+
+    if not tables:
+        print("\033[31mNo tables found in database.\033[0m")
+        return
+
+    choice = select_from_list(tables, title="Select active table")
+    if choice:
+        set_active_table(choice)
+        print(f"\033[32mActive table set to: {choice}\033[0m")
+    else:
+        print("\033[33mSelection cancelled.\033[0m")
+
+
+def manage_templates():
+    select_or_create_template(choose_files(single=True))
+
+
 def main():
     actions: ActionDict = {
         "1": ("Build DataFrame using template", build_df_interactive, (), {}),
-        "2": ("List files in ./Data/", lambda: print("\n".join(f.name for f in get_all_data_files())), (), {}),
+        "2": ("Select/edit metadata template", manage_templates, (), {}),
+        "3": ("List files in ./Data/", lambda: print("\n".join(f.name for f in get_all_data_files())), (), {}),
+        "4": ("SQL analytics", run_sql_engine, (), {}),
+        "5": ("Pandas analytics", run_pd_engine, (), {}),
+        "6": ("Developer tools", DevMenu(devtools_actions).run, (), {}),
+        "7": ("Select active table", choose_active_table, (), {}),
     }
 
-    menu = DevMenu(actions, title="Databridge Manager")
+    menu = DevMenu(actions, title="Pipeline Manager", dev_mode=True)
     menu.run()
 
 
 if __name__ == "__main__":
     main()
+    atexit.register(conn.close)
