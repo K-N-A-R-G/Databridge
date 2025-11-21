@@ -1,7 +1,6 @@
 from custom_types import TemplateDict
 from pathlib import Path
-from typing import Any
-from getdata import read_data, normalize_column, normalize_header, detect_format
+from getdata import read_data, normalize_column, normalize_header
 
 import json
 import pandas as pd

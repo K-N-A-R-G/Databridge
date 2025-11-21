@@ -1,3 +1,4 @@
+from config import TEMPLATES_DIR, BASE_DIR
 from devmenu import DevMenu
 from getdata import normalize_column, detect_format
 from pathlib import Path
@@ -20,7 +21,7 @@ class MetaEditor:
         self.data = pd.DataFrame()
         self.headers: List[str] = []
         self.meta: dict[str, dict[str, Any]] = {}
-        self.template_path = self.file_path.parent / "templates" / (self.file_path.stem + "_meta.json")
+        self.template_path = TEMPLATES_DIR / f"{self.file_path.stem}_meta.json"
         self.load_file()
         self.load_template()
 
@@ -133,7 +134,7 @@ class MetaEditor:
 
 # --- Helper to run editor --------------------------------------------------
 def run_metaeditor(filename: str):
-    path = Path("Data") / filename
+    path = BASE_DIR / filename
     editor = MetaEditor(path)
     editor.edit_header()
     save = input("Save metadata to file? [y/N]: ").strip().lower()
@@ -151,7 +152,7 @@ def select_or_create_template(filename: str) -> Path | None:
     Returns the path to the selected/new template or None when canceled.
 
     """
-    data_path = Path("Data")
+    data_path = BASE_DIR
     templates_path = data_path / "templates"
     templates_path.mkdir(parents=True, exist_ok=True)
 
@@ -178,7 +179,7 @@ def select_or_create_template(filename: str) -> Path | None:
             if choice == "1":
                 return file_template
             elif choice == "2":
-                editor = MetaEditor(Path("Data") / filename)
+                editor = MetaEditor(BASE_DIR / filename)
                 # initialize meta from the loaded template
                 for h, m in tmpl_data.items():
                     if h in editor.meta:
@@ -212,7 +213,7 @@ def select_or_create_template(filename: str) -> Path | None:
             else:
                 print("Cancelled. Returning to options.")
         elif choice == "2":
-            # List of all templates in /Data/templates
+            # List of all templates in /BASE_DIR/templates
             available = sorted([p for p in templates_path.glob("*_meta.json")])
             if not available:
                 print("No existing templates available.")

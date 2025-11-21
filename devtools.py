@@ -9,12 +9,11 @@ from devmenu import DevMenu
 from datetime import datetime
 from getdata import read_data, normalize_header
 from pathlib import Path
-from typing import Any, List, Tuple, Union, Optional
+from typing import Any, List, Union
 
 import json
 import pandas as pd
 import random
-import re
 import string as st
 
 

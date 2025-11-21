@@ -1,198 +1,124 @@
-# Mini-project “databridge”
+# Databridge — Demo ETL/Analytics Project
 
 ## Overview
-**Databridge** is a learning/demo project showing the complete workflow:
-raw data → ETL/ELT → SQL → visualization → business conclusions.
+**Databridge** is a modular demo project showcasing a complete data-processing workflow:
+raw sources → normalization → ETL → SQLite storage → analytics (SQL & Pandas) → visualization outputs.
 
-Main focus:
-- Python (data handling, cleaning, ETL).
-- SQL (aggregation, joins, window functions).
-- Visualization for business analytics.
-- Demonstration of development history and modular design.
+The project is designed to demonstrate:
+- structured ETL pipeline design,
+- reproducible data normalization using templates,
+- SQL and Pandas analytics separation,
+- modular architecture with clear responsibilities,
+- practical application of Python tooling.
 
-## Project Goals
-1. Demonstrate end-to-end data processing.
-2. Practice Python + SQL integration.
-3. Show reproducible workflow with modular architecture.
-4. Document each stage for clarity and re-use.
+---
 
-## Data Sources (test)
-- `sales.csv`: date, product, price, quantity.
-- `customers.csv`: customer info, region, segment, age.
-- `products.json`: categories, cost, discount.
+## Workflow Summary
+1. **Raw data** (`CSV`/`JSON`) is inspected and normalized using interactive templates.
+2. **ETL stage** converts files into clean DataFrames according to template rules.
+3. **SQLite** becomes the central storage: all normalized DataFrames are persisted as tables.
+4. **SQL analytics** operates directly on the SQLite tables.
+5. **Pandas analytics** works on the active table, producing analytical DataFrames.
+6. **Results** (aggregations, trends, categories) are saved as CSV for visualization.
+7. **Maintenance tools** allow managing tables (preview, delete, vacuum).
 
-**Reasons for cleaning/normalization:**
-- Missing values.
-- Different date formats.
-- Duplicate records.
-- Inconsistent categories.
-
-## Workflow
-1. **Raw sources** → cleaned with `MetaEditor` templates.
-2. **ETL/ELT** → normalized DataFrames.
-3. **SQL** → queries with aggregation and joins.
-4. **Visualization** → charts (bar, line, pie).
-5. **Business insights** → criteria and conclusions.
+---
 
 ## Current Progress
-- Modules implemented:
-  - [`getdata.py`](./doc/getdata.md): detect format, read, normalize raw data.
-  - [`template_manager.py`](./doc/template_manager.md): create and manage normalization templates.
-  - [`etl.py`](./doc/etl.md): convert raw files to normalized DataFrames according to templates.
-  - [`devtools.py`](./doc/devtools.md): developer utilities for testing, splitting, noise injection.
-  - [`pipeline.py`](./doc/pipeline.md): orchestrates full ETL process, builds unified DataFrames, and stores results in SQLite.
-  - [`sqlbridge.py`](./doc/sql_layer.md) / [`sqlfuncs.py`](./doc/sql_layer.md): persistent analytical SQL layer — all normalized DataFrames are written into SQLite (`bridge.db`), which serves as the central data storage for analytics and visualization.
+Modules implemented:
 
+  - [`getdata.py`](./doc/getdata.md): detect format, read raw files, normalize headers and column values.
+  - [`template_manager.py`](./doc/template_manager.md): interactive creation and editing of normalization templates.
+  - [`etl.py`](./doc/etl.md): build normalized DataFrames using templates; append multiple sources; align schema.
+  - [`devtools.py`](./doc/devtools.md): developer utilities for splitting files, adding noise, testing workflows.
+  - [`pipeline.py`](./doc/pipeline.md): orchestrates the full ETL process, manages templates, builds DataFrames, writes results to SQLite.
+  - [`sqlbridge.py`](./doc/sql_layer.md) / [`sqlfuncs.py`](./doc/sql_layer.md): SQL analytics layer — executes analytical SQL queries on tables stored in `bridge.db`.
+  - [`pandasbridge.py`](./doc/pdbridge.md): Pandas analytics layer — runs DataFrame-based analytics on the active table and saves results.
+  - [`dbtools.py`](./doc/dbtools.md): database maintenance tools — list, preview, delete, and vacuum SQLite tables.
+  - [`config.py`](./doc/config.md): centralized configuration module — manages paths, active table state, and common runtime settings.
 
-- Development logs, detailed docs and examples → see [`doc/`](./doc/).
+Development logs, detailed docs and examples → see [`doc/`](./doc/).
+
+---
 
 ## Demonstration Criteria
-- ETL/ELT from multiple sources.
-- SQL queries with non-trivial aggregations.
-- Charts for business analysis.
-- Short report/log (what was cleaned, what conclusions drawn).
+- Consistent ETL process from multiple heterogeneous sources.
+- SQL analytics (aggregations, grouping, joins).
+- Pandas analytics (trends, grouping, retention metrics).
+- Result files for further visualization (CSV).
+- Clear documentation of each module and stage.
+
+---
 
 ## Skills Demonstrated
-- Python (pandas, numpy, matplotlib).
-- SQL (JOIN, GROUP BY, window functions).
-- Data preparation and normalization.
-- Visualization and business requirement handling.
-- ML critique (basic regression, error analysis).
+- Python (pandas, sqlite3, pathlib)
+- ETL design and template-driven normalization
+- SQL (GROUP BY, window functions)
+- Data cleaning and schema alignment
+- Modular architecture and reproducible workflows
+
+---
 
 ## Repository Structure
 ```
 Databridge/
 ├── Data
+│   ├── config.txt
 │   ├── customers.csv
+│   ├── customers_noisy.csv
 │   ├── products.json
 │   ├── results
+│   │   ├── analytics
+│   │   │   ├── Average Order Value (AOV).csv
+│   │   │   │   ...
+│   │   │   └── Weekly sales trend.csv
 │   │   ├── databases
 │   │   │   └── bridge.db
-│   │   ├── result_sales_meta.csv
-│   │   ├── result_sales_meta.json
+│   │   ├── result_retail_sales_dataset_meta.csv
+│   │   │   ...
 │   │   └── result_sales_meta.xlsx
 │   ├── retail_sales_dataset.csv
-│   ├── retail_store_sales.csv
+│   ├   ...
 │   ├── sales.csv
 │   └── templates
+│       ├── retail_sales_dataset_meta.json
 │       └── sales_meta.json
 ├── README.md
 ├── __init__.py
+├── analytics.py
+├── config.py
 ├── custom_types.py
+├── dbtools.py
 ├── devmenu.py
 ├── devtools.py
 ├── doc
+│   ├── config.md
+│   ├── dbtools.md
 │   ├── devtools.md
 │   ├── etl.md
 │   ├── getdata.md
 │   ├── images
+│   ├── pdbridge.md
 │   ├── pipeline.md
 │   ├── sql_layer.md
 │   └── template_manager.md
 ├── etl.py
 ├── getdata.py
+├── pdbridge.py
 ├── pipeline.py
 ├── sqlbridge.py
 ├── sqlfuncs.py
 └── template_manager.py
 
-
 ```
+
+---
 
 ## Next Steps
-1. Extend ETL/merging.
-2. SQL queries + examples.
-3. Visualization functions.
-4. Documentation split into `doc/`.
-5. Add optional tests.
+1. Add visualization layer (matplotlib or plotly).
+2. Extend SQL and Pandas analytics set.
+3. Improve error reporting and diagnostics.
+4. Add optional test suite.
+5. Expand example datasets.
 
 ---
-
-## ETL Process Overview
-
-The following diagrams describe the internal logic and data flow between modules in **Databridge**.
-
----
-
-### 1️⃣ Template Loading (`load_template`)
-```mermaid
-flowchart TD
-    A[User chooses template.json] --> B["pipeline.choose_template()"]
-    B --> C["etl.load_template(path)"]
-    C --> D["open(path).read() + json.load()"]
-    D --> E["dict (TemplateDict)"]
-    E --> F["Returned to pipeline"]
-```
-
-#### Explanation:
-The selected JSON template is loaded by etl.load_template() and parsed into a Python dictionary (TemplateDict) that defines which columns are saved, how they are named, and how they are normalized.
-
-### 2️⃣ DataFrame Creation (create_df_from_file)
-```mermaid
-flowchart TD
-    A["pipeline.build_dataframe_from_template()"]
-        --> B["etl.create_df_from_file(file, template)"]
-    B --> C["getdata.read_data(file)"]
-    C --> D["(format, raw list[dict])"]
-    D --> E["getdata.normalize_header()"]
-    E --> F["getdata.normalize_column(sample)"]
-    F --> G{Sample valid?}
-    G -->|Yes| H["Include column"]
-    G -->|No| I["Fill with NaN"]
-    H --> J["pandas.DataFrame(df_dict)"]
-    I --> J
-    J --> K["Returned to pipeline"]
-```
-#### Explanation:
-Each file is read and matched to template columns.
-For every column defined in the template:
-
-- The file headers are normalized.
-
-- A short sample (≈10 rows) is passed to normalize_column() for validation.
-
-- If normalization succeeds for at least one value, the column is included in the result DataFrame.
-
-### 3️⃣ DataFrame Appending (append_df_from_file)
-```mermaid
-flowchart TD
-    A["Existing DataFrame"]
-        --> B["etl.append_df_from_file(df, file, template)"]
-    B --> C["etl.create_df_from_file(file, template)"]
-    C --> D["new_df"]
-    D --> E["Drop empty rows"]
-    E --> F["Align columns by template"]
-    F --> G["pandas.concat(df, new_df)"]
-    G --> H["Drop duplicates (optional)"]
-    H --> I["Return merged DataFrame"]
-```
-#### Explanation:
-When several data sources are processed sequentially:
-
-- Each is normalized via create_df_from_file().
-
-- Columns are aligned according to the template.
-
-- DataFrames are concatenated and optionally deduplicated.
-
-### 4️⃣ High-Level Module Interaction
-```mermaid
-flowchart TD
-    A["MetaEditor / template_manager.py"] --> B["Template JSON"]
-    B --> C["etl.py<br/>create_df_from_file / append_df_from_file"]
-    C --> D["pipeline.py<br/>interactive workflow"]
-    D --> E["SQL queries / visualization<br/>(future stage)"]
-```
-#### Explanation:
-The complete process:
-
-- MetaEditor defines a template.
-
-- etl.py uses it to transform raw data into structured DataFrames.
-
-- pipeline.py orchestrates the workflow (user interaction, file selection, saving).
-
-- The resulting datasets are used for SQL analytics and visualization.
-
----
-📖 **Detailed documentation:** see [`doc/`](./doc/)

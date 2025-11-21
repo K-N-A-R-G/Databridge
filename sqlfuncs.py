@@ -1,7 +1,8 @@
 from custom_types import buffer
-from typing import Callable, Tuple, Optional
+from typing import Callable, Optional
 
-import sqlite3, pandas as pd
+import sqlite3
+import pandas as pd
 
 
 __all__ = []   # ← functions will be added automatically

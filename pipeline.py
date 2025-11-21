@@ -5,18 +5,18 @@ import sqlite3
 from pathlib import Path
 from typing import List, Optional
 
-from config import DB_PATH, get_active_table, set_active_table
+from config import BASE_DIR, RESULTS_DIR, TEMPLATES_DIR, DB_PATH, set_active_table
 from custom_types import ActionDict, DBConnection
+from dbtools import run_dbtools
 from devmenu import DevMenu, select_from_list
-from devtools import split_dataset, add_noise, menu_actions as devtools_actions
+from devtools import menu_actions as devtools_actions
 from etl import append_df_from_file, load_template, create_df_from_file
-from pdbridge import run_pd_engine
+from pdbridge import run_pd_engine  #, load_active_table_df
 from sqlbridge import run_sql_engine
 from template_manager import select_or_create_template
+# from vis.api import show_table_window, show_plot
 
-DATA_DIR = Path("./Data")
-RESULTS_DIR = DATA_DIR / "results"
-TEMPLATES_DIR = DATA_DIR / "templates"
+
 conn = DBConnection()
 
 GREEN = "\033[32m"
@@ -25,7 +25,7 @@ RESET = "\033[0m"
 
 def get_all_data_files(suffixes=None) -> List[Path]:
     """Return all files in ./Data optionally filtered by suffixes."""
-    files = [f for f in DATA_DIR.iterdir() if f.is_file()]
+    files = [f for f in BASE_DIR.iterdir() if f.is_file()]
     if suffixes:
         files = [f for f in files if f.suffix.lower() in suffixes]
     return files
@@ -209,6 +209,18 @@ def manage_templates():
     select_or_create_template(choose_files(single=True))
 
 
+# def visualize_active_table():
+    # df = load_active_table_df()
+    # if df is None:
+        # return
+    # show_plot(df, title=f"Plot of {active_table}")
+
+
+# def preview_active_sql():
+    # result = execute_sql("SELECT * FROM ... LIMIT 2000")
+    # show_table_window(result)
+
+
 def main():
     actions: ActionDict = {
         "1": ("Build DataFrame using template", build_df_interactive, (), {}),
@@ -218,6 +230,9 @@ def main():
         "5": ("Pandas analytics", run_pd_engine, (), {}),
         "6": ("Developer tools", DevMenu(devtools_actions).run, (), {}),
         "7": ("Select active table", choose_active_table, (), {}),
+        "8": ("Database maintenance\n", run_dbtools, (), {}),
+        # "va": ('View active table', visualize_active_table, (), {}),
+        # "an": ("Another vis", preview_active_sql, (), {}),
     }
 
     menu = DevMenu(actions, title="Pipeline Manager", dev_mode=True)

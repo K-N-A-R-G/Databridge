@@ -1,3 +1,5 @@
+from config import DB_PATH
+import time
 from typing import Optional, Dict, Tuple, Callable, Any, Union
 
 import inspect
@@ -37,22 +39,67 @@ class DBConnection:
     _conn: sqlite3.Connection | None = None
     _path: Path | None = None
 
+    # timestamp last optimize
+    _last_optimize: float = 0.0
+    _optimize_interval: float = 4 * 3600      # каждые 4 часа
+
+    # on/off  VACUUM automatically
+    _auto_vacuum: bool = False
+
+
     @classmethod
     def get(cls, path: Path | None = None) -> sqlite3.Connection:
         """Return existing connection or open new one at given path."""
         if cls._conn is None:
-            db_path = path or cls._path or Path("Data/results/databases/bridge.db")
+            db_path = path or cls._path or Path(DB_PATH)
             cls._path = db_path
             cls._conn = sqlite3.connect(db_path)
+
+        cls._maybe_optimize()
+
         return cls._conn
+
+
+    @classmethod
+    def _maybe_optimize(cls):
+        """Automatic periodic optimization every N hours."""
+        now = time.time()
+        if now - cls._last_optimize >= cls._optimize_interval:
+            cls._run_optimize()
+            cls._last_optimize = now
+
+
+    @classmethod
+    def _run_optimize(cls):
+        """Execute PRAGMA optimize and optional VACUUM."""
+        if cls._conn is None:
+            return
+
+        try:
+            cls._conn.execute("PRAGMA optimize;")
+            print("\033[36m[SQLite] optimize() completed.\033[0m")
+        except Exception as e:
+            print(f"\033[33m[SQLite optimize warning] {e}\033[0m")
+
+        if cls._auto_vacuum:
+            try:
+                cls._conn.execute("VACUUM;")
+                print("\033[35m[SQLite] VACUUM completed.\033[0m")
+            except Exception as e:
+                print(f"\033[33m[SQLite shedule vacuum warning] {e}\033[0m")
+
 
     @classmethod
     def close(cls):
+        """Close connection with final optimize."""
         if cls._conn:
+            # finally optimization before close
+            cls._run_optimize()
+
             cls._conn.close()
             cls._conn = None
+
             print("Database closed")
-            input()
 
 
 class DataResult:
