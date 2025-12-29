@@ -1,3 +1,4 @@
+<! --getdata.md-- >
 # ETL Helper Module (`getdata.py`)
 
 This module provides functions for reading, detecting, and normalizing tabular data from **CSV** and **JSON** sources into **pandas DataFrames**.

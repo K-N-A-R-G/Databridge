@@ -41,7 +41,7 @@ class DBConnection:
 
     # timestamp last optimize
     _last_optimize: float = 0.0
-    _optimize_interval: float = 4 * 3600      # каждые 4 часа
+    _optimize_interval: float = 2 * 3600      # every 2 hour
 
     # on/off  VACUUM automatically
     _auto_vacuum: bool = False
@@ -169,6 +169,14 @@ class DataResult:
         -------
         >>> buffer.append_rows([("extra", 123)])
 
+    get()
+        Return contains as a list: [name, columns, rows].
+
+        Example
+        -------
+        >>> buffer.get()
+        ['Some name', [('A', 'B')], [(1, 3), (2, 4)]]
+
     head(n=5)
         Return the first N rows (as list of tuples).
 
@@ -215,7 +223,7 @@ class DataResult:
     across all Databridge modules and acts as a shared communication bridge
     between analysis, persistence, and visualization layers.
     """
-    def __init__(self, columns: list[str] = None, rows: list[tuple] = None, name: str = ""):
+    def __init__(self,name: str = "", columns: list[str] = None, rows: list[tuple] = None):
         self.columns = columns or []
         self.rows = rows or []
         self.name = name
@@ -223,7 +231,6 @@ class DataResult:
    # === universal write / update ===
     def set(self, data, name: str = "") -> None:
         """Accepts DataFrame, Series, list[tuple], list[dict], or JSON-like list."""
-        import pandas as pd
         self.rows.clear()
         self.columns.clear()
         self._ingest(data)
@@ -264,7 +271,6 @@ class DataResult:
     # === internal reader ===
     def _ingest(self, data) -> None:
         """Internal helper for set(): shared type detection logic."""
-        import pandas as pd
         if isinstance(data, pd.DataFrame):
             self.columns = list(data.columns)
             self.rows = [tuple(r) for r in data.itertuples(index=False, name=None)]
@@ -284,12 +290,20 @@ class DataResult:
             raise TypeError(f"Unsupported type for DataResult.set(): {type(data)}")
 
     # === read / representation ===
+    def get(self):
+        return [self.name,
+                self.columns,
+                self.rows]
+
     def head(self, n=5): return self.rows[:n]
+
     def as_dicts(self): return [dict(zip(self.columns, r)) for r in self.rows]
+
     def __len__(self): return len(self.rows)
+
     def __repr__(self):
         lines = [" | ".join(map(str, row)) for row in self.head(5)]
-        return f"<DataResult {self.name or ''}: {len(self.rows)} rows>\n" + "\n".join(lines)
+        return f"<DataResult {self.name or 'Unnamed'}: {len(self.rows)} rows>\n" + "\n".join(lines)
 
 
 buffer = DataResult()

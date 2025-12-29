@@ -1,3 +1,4 @@
+<! --devtools.md-- >
 # Developer Utilities (devtools.py)
 
 This module contains developer-focused utilities for splitting datasets, adding noise, and normalizing headers. These functions are intended for demo, testing, and ETL development, not for production usage.

@@ -1,188 +1,28 @@
-## Pandas Analytics Module (`pdbridge.py`)
+# Pandas Analytics & Database Maintenance
+
+## 1. Pandas Analytics Module (`pdbridge.py` & `pdfuncs.py`)
+
+### Overview
+This module serves as the execution engine for DataFrame-based analytics. Unlike standard scripts, it implements a **Zero-Blocking UI** strategy by offloading heavy computations and GUI rendering to isolated system processes.
+
+### Key Features
+- **Process Isolation**: Spawns independent processes for data visualization (Matplotlib/Tkinter) to keep the main menu responsive.
+- **Hybrid Execution Modes**:
+    - **Preview Mode**: Fast, low-memory execution using a `LIMIT 5` subset for instant terminal feedback.
+    - **Full Mode**: Comprehensive analysis on the entire dataset with optional graphical output.
+- **Universal Data Transport**: Results are wrapped in the `DataResult` buffer, ensuring compatibility between the analytical engine and the visualization layer.
+
+### Core Functions
+- **`run_pd_engine(conn)`**: The main entry point for executing analytics. It detects whether to run a lightweight preview or a full background process based on user input.
+- **`execute_pd_in_process(...)`**: A specialized worker function that handles heavy imports (like Pandas/Matplotlib) and data loading inside a child process to maintain main-process agility.
+- **`@register` (Decorator)**: Located in `pdfuncs.py`, it manages function metadata such as display names, rendering modes (`graph`, `pie`, `table`, `bar`), and execution weight.
+
+### Analytical Workflow
+1. **User Selection**: An analytical function is chosen from the `DevMenu`.
+2. **Mode Selection**: User chooses between a terminal **Preview** or **Full** analysis.
+3. **Execution**:
+    - **Preview**: Loads a micro-subset of the active table and prints the result.
+    - **Full**: Offloads the task to a background process.
+4. **Output**: Results are stored in the `DataResult` buffer and passed to `visfuncs.py` for rendering.
 
-This module provides an execution layer for Pandas-based analytical functions defined in `analytics.py`.
-It loads the active table from SQLite into a DataFrame, executes analytics, previews results, and stores output files.
-
-###Database Maintenance Module (dbtools.py)
-
-This module provides a maintenance interface for managing the SQLite database used by Databridge.
-It allows listing, previewing, and deleting tables, as well as performing manual optimization.
-
-Responsibilities
-
-Inspect all tables stored inside the SQLite database.
-
-Preview table contents without loading full data into memory.
-
-Delete individual tables or wipe the entire database schema.
-
-Execute administrative operations (e.g., VACUUM).
-
-Present a dedicated DevMenu for database operations.
-
-Functions
-list_tables(conn: sqlite3.Connection) -> list[str]
-
-Returns a list of all table names in the database.
-
-preview_table(conn: sqlite3.Connection, table: str, limit: int = 10)
-
-Displays the first limit rows of a table using Pandas for convenience.
-
-delete_table(conn: sqlite3.Connection, table: str)
-
-Removes a single table from the database.
-If the deleted table was active, resets the active table via config.
-
-delete_all_tables(conn: sqlite3.Connection)
-
-Drops all tables from the database.
-Resets the active table and leaves the database file empty but valid.
-
-action_list_tables(conn)
-
-Interactive wrapper for listing tables.
-
-action_preview_table(conn)
-
-Interactive wrapper for previewing selected table.
-
-action_delete_table(conn)
-
-Prompts the user to confirm and delete a single table.
-
-action_delete_all(conn)
-
-Full schema reset with confirmation.
-
-action_vacuum(conn)
-
-Runs SQLite VACUUM to compact the database and reclaim disk space.
-
-make_actiondict(conn) -> dict
-
-Builds the DevMenu ActionDict:
-
-1 — List tables
-
-2 — Preview table
-
-3 — Delete table
-
-4 — Delete all tables
-
-5 — VACUUM
-
-run_dbtools()
-
-Entry point for the Database Maintenance menu:
-
-Retrieves an active SQLite connection.
-
-Launches the DevMenu.
-
-Does not close the connection (DB lifecycle is managed by the main pipeline).
-
-Workflow
-
-User selects “Database maintenance” from the main pipeline.
-
-The module retrieves the currently active SQLite connection.
-
-DevMenu presents administrative options.
-
-Actions affect database structure immediately.
-
-Control returns to the pipeline; database remains open.
-
-Notes
-
-Does not close or recreate database connections.
-
-Safe to use during long-running sessions.
-
-VACUUM requires an open connection and may take time on large files.
-
-Useful for cleaning up artifacts created during ETL and experimentation. Responsibilities
-
-Retrieve the active table via `config.get_active_table()`.
-
-Load full table contents using `pandas.read_sql_query`.
-
-Execute analytics functions registered in `analytics.__all__`.
-
-Provide manual preview mode for inspection.
-
-Save analytical outputs (DataFrames) into
-`Data/results/analytics/{name}.csv`.
-
-Expose a `DevMenu` of available analytics operations.
-
-### Functions
-**`run_action(conn: sqlite3.Connection, index: int)`**
-
-Runs a selected analytics function.
-
-Fetches DataFrame of active table.
-
-Calls the corresponding analytics function:
-
-If it returns a DataFrame → preview + save.
-
-If it returns None → preview was already shown.
-
-If it returns a scalar → printed directly.
-
-Handles missing columns and Pandas parsing errors gracefully.
-
-**`preview_active_table()`**
-
-Displays the first 5 rows of the active table.
-
-make_actiondict(conn) -> dict
-
-Builds the ActionDict for DevMenu:
-
-Each registered analytics function is assigned a numbered action.
-
-Includes an action "p" for table preview.
-
-**`run_pd_engine()`**
-
-Entry point for Pandas analytics:
-
-Opens database connection via SQLite.
-
-Shows initial table preview.
-
-Launches DevMenu.
-
-Returns control to the pipeline without closing the connection.
-
-### Workflow
-
-1. Active table is chosen through the main pipeline menu.
-
-2. User opens "Pandas Analytics".
-
-3. The module:
-
-  - Loads the active table into a DataFrame.
-
-  - Passes it to analytics functions.
-
-  - Previews head rows.
-
-  - Saves final DataFrame output to CSV.
-
-4. Outputs are available for visualizations and dashboards.
 ---
-### Notes
-
- - Analytics functions must accept a DataFrame and may return `pd.DataFrame,` scalar, or `None`.
-
- - Errors such as incompatible types or invalid date formats are shown but do not interrupt the menu.
-
- - Designed for clean, schema-consistent tables (produced via templates and ETL).
-
- - Does not modify database tables.

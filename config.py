@@ -30,5 +30,5 @@ def get_active_table() -> Optional[str]:
         _current_table = val
     except Exception as ex:
         raise(ex, 'No active table selected yet')
-    print(f'get {_current_table}')
+    # print(f'get {_current_table}')
     return _current_table

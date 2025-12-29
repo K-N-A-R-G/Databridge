@@ -1,3 +1,4 @@
+<! --config.md-- >
 ## Configuration Module (`config.py`)
 
 This module provides a centralized configuration layer for the Databridge project.

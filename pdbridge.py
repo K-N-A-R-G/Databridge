@@ -4,10 +4,17 @@ pandasbridge.py — Pandas analytics execution layer for Databridge
 from config import get_active_table, DB_PATH, RESULTS_DIR
 from devmenu import DevMenu
 from custom_types import buffer, DBConnection
+from shared_library import execute_pd_in_process
+from vis.vis_core import vis_act
 
+import multiprocessing as mp
+import pdfuncs
 import pandas as pd
-import sqlite3
-import analytics
+import threading
+
+from typing import NoReturn
+
+
 
 
 # === Setup results directory ===
@@ -30,14 +37,13 @@ def save_result(df: pd.DataFrame, name: str) -> None:
     print(f"Saved: {out}")
 
 
-def preview_active_table() -> None:
+def preview_active_table(conn) -> None:
     """Show first rows of currently active table."""
     table = get_active_table()
     if not table:
         print("No active table selected.")
         return
 
-    conn = sqlite3.connect(DB_PATH)
     try:
         print(f"\nActive table: {table}")
         df = pd.read_sql_query(f"SELECT * FROM {table} LIMIT 10;", conn)
@@ -48,77 +54,66 @@ def preview_active_table() -> None:
         # conn.close()
 
 
-def load_active_table_df() -> pd.DataFrame | None:
+def load_active_table_df(conn) -> pd.DataFrame | NoReturn |None:
     """Return full DataFrame of active table, or None if not selected."""
     table = get_active_table()
     if not table:
-        print("No active table selected.")
-        return None
+        raise FileNotFoundError("No active table selected.")
+
 
     try:
-        conn = sqlite3.connect(DB_PATH)
         df = pd.read_sql_query(f"SELECT * FROM {table};", conn)
         return df
     except Exception as e:
         print(f"[Load ERROR] {e}")
         return None
-    # finally:
-        # conn.close()
+
 
 # === Core analytics runner ===
 
-def run_action(conn: sqlite3.Connection, index: int):
-    """Run a single pandas analytics function by menu index."""
-    func_name = analytics.__all__[index - 1]
-    func = getattr(analytics, func_name)
-
+def run_action(conn, index: int):
     table = get_active_table()
     if not table:
-        print("No active table selected. Use: Select active table.")
+        print("No active table selected.")
         return
 
-    print(f"\n\033[1;35m{func.display_name}\033[0m")
-    print(f"Table: {table}")
+    # Извлекаем метаданные (по аналогии с SQL-блоком)
+    keys = list(pdfuncs.__all__.keys())
+    func_name = keys[index - 1]
+    func = pdfuncs.__all__[func_name]
 
-    # Load table into DataFrame
-    try:
-        df = pd.read_sql_query(f"SELECT * FROM {table};", conn)
-    except Exception as e:
-        print(f"[Load ERROR] {e}")
-        return
+    light = getattr(func, 'light', True)
+    render_mode = getattr(func, 'render', 'table')
 
-    # Run analytic function: df -> df_out
-    try:
-        result = func(df)
-    except Exception as e:
-        print(f"[Analytics ERROR] {e}")
-        return
+    print(f"\n\033[1;36m[PANDAS] {getattr(func, 'display_name', func_name)}\033[0m")
+    choice = input("<Enter> = Preview | F = Full: ").strip().lower()
+    full_mode = (choice == 'f')
 
-    # result is DataFrame or scalar
-    if isinstance(result, pd.DataFrame):
-        _preview(result, func.display_name)
-        save_result(result, func.display_name)
-
-        # write to shared buffer
-        buffer.set(result, name=func.display_name)
-
-    elif isinstance(result, (int, float)):
-        print(f"Result: {result}")
-        buffer.set(result, name=func.display_name)
-
-    elif isinstance(result, dict):
-        # demo() returns multiple values
-        print("Demo results:")
-        for key, val in result.items():
-            if isinstance(val, pd.DataFrame):
-                _preview(val, key)
-                save_result(val, key)
-            else:
-                print(f"{key}: {val}")
-        buffer.set(result, name=func.display_name)
+    if not full_mode:
+        # --- PREVIEW (Быстрая загрузка 5 строк прямо здесь) ---
+        df_mini = pd.read_sql_query(f"SELECT * FROM {table} LIMIT 5;", conn)
+        func(df_mini, manual=True) # Выведет результат в консоль
 
     else:
-        print("No data returned.")
+        # --- FULL (Уходим в фон) ---
+        if light:
+            # ТАБЛИЦЫ: грузим данные в основном потоке (но можно и в Thread)
+            print(f"[SYSTEM] Loading full table for Pandas...")
+            df_full = pd.read_sql_query(f"SELECT * FROM {table};", conn)
+            func(df_full, manual=False)
+
+            threading.Thread(target=vis_act.do, args=(render_mode,), daemon=True).start()
+
+        else:
+            # ГРАФИКИ: ВООБЩЕ ничего не грузим здесь!
+            # Просто запускаем процесс, пусть он сам грузит Pandas и данные.
+            print(f"[SYSTEM] Spawning isolated Pandas process...")
+            p = mp.Process(
+                target=execute_pd_in_process,
+                args=('pdfuncs', func_name, DB_PATH, table, render_mode),
+                daemon=True
+            )
+            p.start()
 
 
 # === DevMenu actions ===
@@ -127,8 +122,8 @@ def make_actiondict(conn):
     actions = {}
 
     # pandas analytic functions
-    for i, func_name in enumerate(analytics.__all__, start=1):
-        func = getattr(analytics, func_name)
+    for i, func_name in enumerate(pdfuncs.__all__.keys(), start=1):
+        func = pdfuncs.__all__[func_name]
         actions[str(i)] = (
             func.display_name,
             run_action,
@@ -137,25 +132,21 @@ def make_actiondict(conn):
         )
 
     # utility: preview active table
-    actions["p"] = ("Preview active table", preview_active_table, (), {})
+    actions["p"] = ("Preview active table", preview_active_table, (conn,), {})
 
     return actions
 
 
 # === Entry point ===
 
-def run_pd_engine():
+def run_pd_engine(conn) -> NoReturn | None:
     """Entry point for Pipeline menu — opens Pandas Analytics DevMenu."""
     if not DB_PATH.exists():
-        print("Database not found. Run ETL first.")
-        return
+        raise FileNotFoundError("Database not found. Run ETL first.")
+
 
     # Show preview before entering menu (nice UX)
-    preview_active_table()
-
-    conn = DBConnection.get()
+    preview_active_table(conn)
 
     menu = DevMenu(make_actiondict(conn), title="Pandas Analytics", dev_mode=True)
     menu.run()
-
-    # conn.close()

@@ -1,3 +1,4 @@
+<! --dbtools.md -->
 ## Database Maintenance Module (`dbtools.py`)
 
 This module provides a maintenance interface for managing the SQLite database used by Databridge.

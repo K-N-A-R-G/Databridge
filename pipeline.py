@@ -1,6 +1,6 @@
-import atexit
 import pandas as pd
 import sqlite3
+import threading
 
 from pathlib import Path
 from typing import List, Optional
@@ -14,10 +14,8 @@ from etl import append_df_from_file, load_template, create_df_from_file
 from pdbridge import run_pd_engine  #, load_active_table_df
 from sqlbridge import run_sql_engine
 from template_manager import select_or_create_template
-# from vis.api import show_table_window, show_plot
+from vis.vis_core import VIS_ROOT
 
-
-conn = DBConnection()
 
 GREEN = "\033[32m"
 RESET = "\033[0m"
@@ -191,7 +189,6 @@ def choose_active_table():
     tables = pd.read_sql_query(
         "SELECT name FROM sqlite_master WHERE type='table';", conn
     )["name"].tolist()
-    conn.close()
 
     if not tables:
         print("\033[31mNo tables found in database.\033[0m")
@@ -209,36 +206,34 @@ def manage_templates():
     select_or_create_template(choose_files(single=True))
 
 
-# def visualize_active_table():
-    # df = load_active_table_df()
-    # if df is None:
-        # return
-    # show_plot(df, title=f"Plot of {active_table}")
-
-
-# def preview_active_sql():
-    # result = execute_sql("SELECT * FROM ... LIMIT 2000")
-    # show_table_window(result)
-
+# def close_windows(root: VIS_ROOT):
+    # """
+    # Close all children Tkinter windows and leave main loop.
+    # """
+    # # for win in root.winfo_children():
+        # # if isinstance(win, VIS_JR):
+            # # win.destroy()
+    # root.quit()
 
 def main():
+    conn = DBConnection().get()
     actions: ActionDict = {
         "1": ("Build DataFrame using template", build_df_interactive, (), {}),
         "2": ("Select/edit metadata template", manage_templates, (), {}),
         "3": ("List files in ./Data/", lambda: print("\n".join(f.name for f in get_all_data_files())), (), {}),
-        "4": ("SQL analytics", run_sql_engine, (), {}),
-        "5": ("Pandas analytics", run_pd_engine, (), {}),
+        "4": ("SQL analytics", run_sql_engine, (conn,), {}),
+        "5": ("Pandas analytics", run_pd_engine, (conn,), {}),
         "6": ("Developer tools", DevMenu(devtools_actions).run, (), {}),
         "7": ("Select active table", choose_active_table, (), {}),
         "8": ("Database maintenance\n", run_dbtools, (), {}),
-        # "va": ('View active table', visualize_active_table, (), {}),
-        # "an": ("Another vis", preview_active_sql, (), {}),
     }
-
     menu = DevMenu(actions, title="Pipeline Manager", dev_mode=True)
+
     menu.run()
+    VIS_ROOT.after(0, VIS_ROOT.quit)
 
 
 if __name__ == "__main__":
-    main()
-    atexit.register(conn.close)
+    threading.Thread(target=main).start()
+    VIS_ROOT.withdraw()
+    VIS_ROOT.mainloop()
