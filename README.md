@@ -52,6 +52,7 @@ Development logs and detailed documentation → see [`doc/`](./doc/).
 ---
 
 ## Repository Structure
+```
 Databridge/
 ├── Data
 │   ├── config.txt
@@ -61,19 +62,12 @@ Databridge/
 │   ├── results
 │   │   ├── analytics
 │   │   │   ├── Average Order Value (AOV).csv
-│   │   │   ├── Category revenue contribution.csv
-│   │   │   ├── Customer retention ratio.csv
-│   │   │   ├── Monthly retention.csv
-│   │   │   ├── Sales by weekday.csv
-│   │   │   ├── Top customers by revenue.csv
+               ...
 │   │   │   └── Weekly sales trend.csv
 │   │   ├── databases
 │   │   │   └── bridge.db
 │   │   ├── result_retail_sales_dataset_meta.csv
-│   │   ├── result_retail_sales_dataset_meta.json
-│   │   ├── result_retail_sales_dataset_meta.xlsx
-│   │   ├── result_sales_meta.csv
-│   │   ├── result_sales_meta.json
+               ...
 │   │   └── result_sales_meta.xlsx
 │   ├── retail_sales_dataset.csv
 │   ├── retail_store_sales.csv
@@ -97,7 +91,7 @@ Databridge/
 │   ├── images
 │   ├── pdbridge.md
 │   ├── pipeline.md
-│   ├── sql_layer.md
+│   ├── sqlbridge.md
 │   └── template_manager.md
 ├── etl.py
 ├── getdata.py
@@ -107,13 +101,12 @@ Databridge/
 ├── shared_library.py
 ├── sqlbridge.py
 ├── sqlfuncs.py
-├── temp
 ├── template_manager.py
 └── vis
     ├── __init__.py
     ├── vis_core.py
     └── visfuncs.py
-
+```
 ---
 
 ## Next Steps
