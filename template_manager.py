@@ -29,6 +29,10 @@ class MetaEditor:
         fmt = detect_format(self.file_path)
         sample = self.file_path.read_text(encoding="utf-8")[:2048]
 
+        if fmt in ["xlsx", "xls"]:
+        # raise DemoError("Excel support")
+            raise DemoError()
+
         if fmt == "json":
             try:
                 data_obj = json.loads(sample)
@@ -265,7 +269,6 @@ def select_or_create_template(filename: str) -> Path | None:
                     continue
         elif choice == "3":
             return None
-
 
 
 menu_actions = {

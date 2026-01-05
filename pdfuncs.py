@@ -1,16 +1,19 @@
 import pandas as pd
 
-from getdata import normalize_header
 from custom_types import buffer
+from getdata import normalize_header
 from typing import Callable
 
 
-__all__ = []
+__all__ = {}
 
-def register(name: str):
+def register(name: str, light=True, render='table'):
+    """Decorator: assigns user-friendly name and auto-registers the function."""
     def wrapper(func: Callable):
         func.display_name = name
-        __all__.append(func.__name__)
+        func.light = light
+        func.render = render
+        __all__[func.__name__] = func
         return func
     return wrapper
 
@@ -34,9 +37,8 @@ def weekly_sales_trend(df: pd.DataFrame, manual=True):
     grouped["pct_change"] = grouped["revenue"].pct_change().round(3)
     if manual:
         print(grouped.head())
-        return grouped
+        return
     buffer.set(grouped, "weekly_sales_trend")
-    return grouped
 
 
 # === 2) CATEGORY CONTRIBUTION ===
@@ -57,46 +59,63 @@ def category_contribution(df: pd.DataFrame, manual=True):
 
     if manual:
         print(grouped)
-        return grouped
+        return
     buffer.set(grouped, "category_contribution")
-    return grouped
 
 
 # === 3) CUSTOMER RETENTION ===
-@register("Customer retention ratio")
+@register("Customer retention ratio", render="graph", light=False)
 def customer_retention(df: pd.DataFrame, manual=True):
     df = normalize_df_columns(df)
     df = ensure_date(df)
 
+    # 1. Calculation logic
     df["first_purchase"] = df.groupby("customer_id")["date"].transform("min")
     df["is_repeat"] = df["date"] > df["first_purchase"]
 
-    ratio = df["is_repeat"].mean()
+    if not df["is_repeat"].any():
+        msg = "Data insight: This dataset contains only unique customers.\
+ Retention analysis is not applicable."
+        if manual:
+            print(f"\n[!] {msg}")
+        buffer.clear()
+        return
 
-    result = pd.DataFrame({"retention_ratio": [ratio]})
+    df['month'] = df['date'].dt.to_period('M')
+
+    # Calculating the share of repeat clients
+    grouped = df.groupby("month")["is_repeat"].mean().reset_index()
+
+    # For Matplotlib plots, it is better to have a Timestamp rather than a Period
+    grouped['month'] = grouped['month'].dt.to_timestamp()
 
     if manual:
-        print(result)
-        return result
-    buffer.set(result, "customer_retention")
-    return result
+        print("Data insight: This dataset contains only unique\
+         customers. Retention analysis is not applicable." if not grouped.bool()
+         else grouped)
+        return
+
+    name = "Customer Retention Trend"
+    buffer.set(grouped, name=name)
 
 
 # === 4) AVG ORDER VALUE (AOV) ===
-@register("Average Order Value (AOV)")
-def aov(df: pd.DataFrame, manual=True):
+@register("Average Order Value (AOV)", light=True, render='table')
+def aov_total(df: pd.DataFrame, manual: bool = True):
     df = normalize_df_columns(df)
     df = ensure_revenue(df)
 
-    # every row = one purcharge, just average
-    value = df["revenue"].mean()
-    result = pd.DataFrame({"avg_order_value": [value]})
+    # Calculate Single Number
+    value = df["revenue"].mean().round(2)
 
     if manual:
-        print(result)
-        return result
-    buffer.set(result, "aov")
-    return result
+        print(f"Total AOV: {value}")
+        return
+    else:
+        res_df = pd.DataFrame(
+        [{"Metric": "Average Order Value", "Value": round(value, 2)}]
+        )
+        buffer.set(res_df, name="AOV")
 
 
 # === 5) SALES BY WEEKDAY ===
@@ -119,9 +138,8 @@ def sales_by_weekday(df: pd.DataFrame, manual=True):
 
     if manual:
         print(grouped)
-        return grouped
+        return
     buffer.set(grouped, "sales_by_weekday")
-    return grouped
 
 
 # === 6) TOP CUSTOMERS ===
@@ -139,10 +157,36 @@ def top_customers(df: pd.DataFrame, manual=True, limit=10):
     )
 
     if manual:
-        # print(grouped)
-        return grouped
+        print(grouped)
+        return
     buffer.set(grouped, "top_customers")
-    return grouped
+
+
+# === 6) MOUNYHLY REVENUE ===
+@register("Monthly revenue trend", light=False, render='graph')
+def monthly_revenue_trend(df: pd.DataFrame, manual: bool = True):
+    df = normalize_df_columns(df)
+    df = ensure_date(df)
+    df = ensure_revenue(df)
+
+    # Агрегация
+    grouped = (
+        df.assign(period=df["date"].dt.to_period("M"))
+        .groupby("period", sort=True)["revenue"]
+        .sum()
+        .reset_index()
+    )
+
+    # Для графика нам нужны объекты Timestamp, а не периоды
+    grouped["period"] = grouped["period"].dt.to_timestamp()
+
+    if manual:
+        print(grouped)
+        return
+
+    # В буфер улетает чистый DataFrame.
+    # Визуализатор сам поймет: X = 'period', Y = 'revenue'
+    buffer.set(grouped, name="monthly_revenue")
 
 
 # === BASE NORMALIZATION ===

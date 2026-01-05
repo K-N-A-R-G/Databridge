@@ -1,26 +1,28 @@
-from custom_types import buffer
+from custom_types import buffer, DBConnection
 from typing import Callable, Optional
 
-import sqlite3
 import pandas as pd
 
 
-__all__ = []   # ← functions will be added automatically
+__all__ = {}   # ← functions will be added automatically
 
 
-def register(name: str):
+def register(name: str, light=True, render='table'):
     """Decorator: assigns user-friendly name and auto-registers the function."""
     def wrapper(func: Callable):
         func.display_name = name
-        __all__.append(func.__name__)
+        func.light = light
+        func.render = render
+        __all__[func.__name__] = func
         return func
     return wrapper
 
 
-def query(conn: sqlite3.Connection, sql: str,
+def query(conn, sql: str,
           params: Optional[tuple] = None,
           manual: bool = True,
-          preview: int = 10) -> None:
+          preview: int = 10,
+          name: str = "SQL Query Result") -> None:
     """
     Executes arbitrary SQL and returns result as DataResult or prints preview.
     """
@@ -40,12 +42,13 @@ def query(conn: sqlite3.Connection, sql: str,
     else:
         buffer.set(
         data=[tuple(r) for r in rows],
-        name="SQL Query Result"
+        name=name
         )
 
 
-@register("Top products by revenue")
-def top_products(conn: sqlite3.Connection, limit: int = 5, manual=True) -> pd.DataFrame:
+@register("Top products by revenue", light=True, render='table')
+def top_products(limit: int = 5, manual: bool=True) -> pd.DataFrame:
+    conn = DBConnection().get()
     sql = """
         SELECT p.category, s.product, SUM(s.price * s.quantity) AS revenue
         FROM sales s
@@ -54,11 +57,12 @@ def top_products(conn: sqlite3.Connection, limit: int = 5, manual=True) -> pd.Da
         ORDER BY revenue DESC
         LIMIT ?;
     """
-    return query(conn, sql, (limit,), manual=manual)
+    query(conn, sql, (limit,), manual=manual, name=top_products.display_name)
 
 
-@register("Average daily sales by region")
-def avg_check_by_region(conn: sqlite3.Connection, manual=True) -> pd.DataFrame:
+@register("Average daily sales by region", light=False, render='bar')
+def avg_check_by_region(manual=True) -> pd.DataFrame:
+    conn = DBConnection().get()
     sql = """
         SELECT c.region,
                ROUND(SUM(s.price * s.quantity) / COUNT(DISTINCT s.date), 2) AS avg_daily_sales
@@ -67,11 +71,12 @@ def avg_check_by_region(conn: sqlite3.Connection, manual=True) -> pd.DataFrame:
         GROUP BY c.region
         ORDER BY avg_daily_sales DESC;
     """
-    return query(conn, sql, manual=manual)
+    query(conn, sql, manual=manual, name=avg_check_by_region.display_name)
 
 
-@register("Rolling weekly revenue")
-def rolling_weekly_sales(conn: sqlite3.Connection, manual=True) -> pd.DataFrame:
+@register("Rolling weekly revenue", light=False, render='graph')
+def rolling_weekly_sales(manual=True) -> pd.DataFrame:
+    conn = DBConnection().get()
     sql = """
         SELECT date,
                SUM(price * quantity)
@@ -79,4 +84,4 @@ def rolling_weekly_sales(conn: sqlite3.Connection, manual=True) -> pd.DataFrame:
         FROM sales
         ORDER BY date;
     """
-    return query(conn, sql, manual=manual)
+    query(conn, sql, manual=manual, name=rolling_weekly_sales.display_name)

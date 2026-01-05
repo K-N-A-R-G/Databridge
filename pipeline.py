@@ -1,6 +1,5 @@
-import atexit
 import pandas as pd
-import sqlite3
+import threading
 
 from pathlib import Path
 from typing import List, Optional
@@ -11,13 +10,11 @@ from dbtools import run_dbtools
 from devmenu import DevMenu, select_from_list
 from devtools import menu_actions as devtools_actions
 from etl import append_df_from_file, load_template, create_df_from_file
-from pdbridge import run_pd_engine  #, load_active_table_df
+from pdbridge import run_pd_engine
 from sqlbridge import run_sql_engine
 from template_manager import select_or_create_template
-# from vis.api import show_table_window, show_plot
+from vis.vis_core import VIS_ROOT
 
-
-conn = DBConnection()
 
 GREEN = "\033[32m"
 RESET = "\033[0m"
@@ -91,8 +88,14 @@ def build_df_interactive():
     if template_path is None:
         print("No template selected.")
         return None
-    if template_path:
-        build_dataframe_from_template(template_path)
+    do_drop = input("Drop duplicates? (Y/n): ").lower() != 'n'
+    do_save = input("Save result to file? (y/N): ").lower() == 'y'
+
+    build_dataframe_from_template(
+        template_path,
+        drop_duplicates=do_drop,
+        save_result=do_save
+    )
 
 
 def build_dataframe_from_template(
@@ -171,12 +174,13 @@ def save_dataframe(df: pd.DataFrame, template_path: Path):
     print(f"\nSaved result to {out_base}")
 
 
-def write_tables_to_db(tables: dict[str, pd.DataFrame], conn) -> None:
+def write_tables_to_db(tables: dict[str, pd.DataFrame]) -> None:
     """
     Write multiple DataFrames into SQLite cache.
 
     Each key of 'tables' becomes table name; if table exists, it's replaced.
     """
+    conn = DBConnection().get()
     for name, df in tables.items():
         df.to_sql(name, conn, if_exists="replace", index=False)
 
@@ -187,11 +191,10 @@ def choose_active_table():
         print("\033[31mDatabase not found. Run pipeline first.\033[0m")
         return
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = DBConnection.get()
     tables = pd.read_sql_query(
         "SELECT name FROM sqlite_master WHERE type='table';", conn
     )["name"].tolist()
-    conn.close()
 
     if not tables:
         print("\033[31mNo tables found in database.\033[0m")
@@ -209,18 +212,6 @@ def manage_templates():
     select_or_create_template(choose_files(single=True))
 
 
-# def visualize_active_table():
-    # df = load_active_table_df()
-    # if df is None:
-        # return
-    # show_plot(df, title=f"Plot of {active_table}")
-
-
-# def preview_active_sql():
-    # result = execute_sql("SELECT * FROM ... LIMIT 2000")
-    # show_table_window(result)
-
-
 def main():
     actions: ActionDict = {
         "1": ("Build DataFrame using template", build_df_interactive, (), {}),
@@ -231,14 +222,14 @@ def main():
         "6": ("Developer tools", DevMenu(devtools_actions).run, (), {}),
         "7": ("Select active table", choose_active_table, (), {}),
         "8": ("Database maintenance\n", run_dbtools, (), {}),
-        # "va": ('View active table', visualize_active_table, (), {}),
-        # "an": ("Another vis", preview_active_sql, (), {}),
     }
-
     menu = DevMenu(actions, title="Pipeline Manager", dev_mode=True)
+
     menu.run()
+    VIS_ROOT.after(0, VIS_ROOT.quit)
 
 
 if __name__ == "__main__":
-    main()
-    atexit.register(conn.close)
+    threading.Thread(target=main).start()
+    VIS_ROOT.withdraw()
+    VIS_ROOT.mainloop()
