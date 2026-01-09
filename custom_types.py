@@ -52,8 +52,10 @@ class DBConnection:
         """Return existing connection or open new one at given path."""
         if cls._conn is None:
             db_path = path or cls._path or Path(DB_PATH)
+            db_path.parent.mkdir(parents=True, exist_ok=True)
             cls._path = db_path
             cls._conn = sqlite3.connect(db_path)
+            cls._conn.execute("PRAGMA journal_mode=WAL;")
 
         cls._maybe_optimize()
 

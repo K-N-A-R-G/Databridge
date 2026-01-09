@@ -130,6 +130,20 @@ def normalize_header(name: str) -> str:
     return name.strip("_")
 
 
+def normalize_alpha(x):
+    if pd.isna(x):
+        return pd.NA
+    s = str(x).strip()
+    return s if s.isalpha() else pd.NA
+
+
+def normalize_id(x):
+    if pd.isna(x):
+        return pd.NA
+    s = str(x).strip()
+    return s if s.isidentifier() else pd.NA
+
+
 def normalize_column(values: pd.Series,
                      target_name: str,
                      dtype: str,
@@ -141,7 +155,7 @@ def normalize_column(values: pd.Series,
     - values: original column values
     - target_name: target header name
     - dtype: target type (str, int, float, date)
-    - format_spec: formatting string, e.g. ":.2f" or date format
+    - format_spec: formatting string, e.g. ".2f" or date format
     - header_case: 'lower', 'capitalize', 'title', 'upper' for column name normalization
 
     Returns a new Series with normalized values.
@@ -158,7 +172,10 @@ def normalize_column(values: pd.Series,
     if dtype == "numeric":
         series = pd.to_numeric(series, errors="coerce")
     elif dtype == "int":
-        series = pd.to_numeric(series, errors="coerce").astype("Int64")
+        # Сначала превращаем всё в числа (мусор станет NaN)
+        temp_numeric = pd.to_numeric(series, errors="coerce")
+        # Округляем (чтобы 101.0 стало 101) и принудительно в Int64
+        series = pd.Series(temp_numeric).round().astype("Int64")
     elif dtype == "float":
         series = pd.to_numeric(series, errors="coerce").astype(float)
         if format_spec:
@@ -167,6 +184,10 @@ def normalize_column(values: pd.Series,
             )
     elif dtype == "str":
         series = series.astype(str)
+    elif dtype == "alpha":
+        series = series.map(normalize_alpha)
+    elif dtype == "identifier":
+        series = series.map(normalize_id)
     elif dtype == "date":
         # convert to datetime
         series = pd.to_datetime(series, errors="coerce")

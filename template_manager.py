@@ -11,6 +11,8 @@ import pandas as pd
 class MetaEditor:
     TYPES = {
         "str": str,
+        "id": "identifier",
+        "alpha": "alpha",
         "int": int,
         "float": float,
         "date": "date",
@@ -74,7 +76,7 @@ class MetaEditor:
         print(f"\nEditing file: {self.file_path}\n")
         print("Current headers and metadata:")
         for h, m in self.meta.items():
-            save_mark = "\033[92m[S]\033[0m" if m.get("save") else "[ ]"  # зеленый [S] или пустой [ ]
+            save_mark = "\033[92m[S]\033[0m" if m.get("save") else "[ ]"
             print(f"{h} {save_mark} → type={m['type']}, format={m['format']}, header_case={m['header_case']}")
         print()
 
@@ -103,7 +105,15 @@ class MetaEditor:
 
             # --- Type and format ---
             default_type = col_meta["type"]
-            dtype_input = input(f"Type (str,int,float,date) [default={default_type}]: ").strip()
+            print("Available types:")
+            print("  str         – any text")
+            print("  alpha       – letters only, e. g. 'Male' or 'Recovered'")
+            print("  id  – identifier-like text (letters, digits, _, must start with letter or _)")
+            print("  int         – integer numbers")
+            print("  float       – floating-point numbers")
+            print("  date        – date/time values")
+
+            dtype_input = input(f"Type [default={default_type}]: ").strip()
             if dtype_input in self.TYPES:
                 col_meta["type"] = dtype_input
 
@@ -112,7 +122,7 @@ class MetaEditor:
             col_meta["format"] = fmt if fmt else col_meta["format"]
 
             # --- Preview using normalize_column ---
-            dtype_for_preview = self.TYPES[col_meta["type"]]
+            dtype_for_preview = col_meta["type"]
             preview = normalize_column(
                 self.data[name].head(5),
                 target_name=col_meta["target_name"],

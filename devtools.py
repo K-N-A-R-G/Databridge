@@ -127,7 +127,7 @@ menu_actions: ActionDict = {
         add_noise,
         (),
         {
-         "input_path": Path("Data/customers.csv"),
+         "input_path": Path("Data/retail_sales_dataset.csv"),
          "level": 0.2,
          "write_file": True
         }),

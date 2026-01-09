@@ -135,7 +135,7 @@ def build_dataframe_from_template(
 
     conn = DBConnection.get()
     tables = {template_path.stem: df}
-    write_tables_to_db(tables, conn)
+    write_tables_to_db(tables)
     print(f"{GREEN}SQLite cache updated:{RESET} {template_path.stem} → bridge.db")
 
     return df

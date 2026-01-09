@@ -13,7 +13,6 @@ from vis.vis_core import VIS_ROOT
 def run_main():
     conn = DBConnection.get()
 
-    # Теперь это чистый пульт управления
     actions: ActionDict = {
         "1": ("Build DataFrame using template", build_df_interactive, (), {}),
         "2": ("Select/edit metadata template", manage_templates, (), {}),
